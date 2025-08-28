@@ -6,19 +6,31 @@ OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix
 
 ## ✨ New Features
 
-### 🔧 Dynamic Configuration
-- **Dynamic Prefix**: Set custom prefix per server with `?prefix set <symbol>`
-- **Permission-Aware Help**: Help command shows only commands you can actually use
-- **Multi-Word Commands**: Support for commands like `lockdown all`, `purge between`, etc.
+### 🔧 Dynamic Configuration & Aliases
+- **Dynamic Prefix**: Set custom prefix per server with `?prefix set <symbol>` (alias: `?px`)
+- **Command Aliases**: All commands now have short aliases (e.g., `?help` → `?h`, `?purge` → `?p`)
+- **Permission-Aware Help**: Help command shows only commands you can actually use with aliases displayed
+- **Multi-Word Commands**: Support for commands like `lockdown all`, `purge between`, `notes add`, etc.
 - **Instant Command Cleanup**: Commands are deleted immediately to keep channels clean
 
+### 🎨 Visual Enhancements
+- **Gradient Embeds**: All embeds now feature automatic deep blue to black gradient banners
+- **Consistent Theming**: Dark OLED-friendly color scheme throughout
+- **Rich Visual Feedback**: Enhanced embed formatting with contextual colors and timestamps
+
 ### 🛡️ Enhanced Security & Moderation
-- **Advanced Purge**: `?purge all` (delete everything), `?purge between <id1> <id2>` (range deletion)
-- **Channel Nuke**: `?nuke` completely recreates a channel (removes all history)
-- **Lockdown System**: Lock single/all channels, ignore lists, custom target roles
-- **Anti-Raid Protection**: Automatic lockdown on mass joins with configurable thresholds
-- **Message Filters**: Block links/invites per channel with whitelist support
-- **Thread Management**: Basic thread lock/unlock commands
+- **Advanced Purge System**: Multiple purge modes with no confirmation required:
+  - `?purge <count>` (alias: `?p`) - Delete 1-100 messages
+  - `?purge all` - Delete all messages in channel (batched)
+  - `?purge between <id1> <id2>` - Delete messages in ID range
+  - `?purge bots/humans` - Delete messages from bots or humans only
+  - `?purge links/invites` - Delete messages containing links or Discord invites
+  - `?purge contains/startswith/endswith <text>` - Delete messages matching text patterns
+- **Temporary Bans**: `?tempban @user <duration> [reason]` (alias: `?tb`) - Auto-expiring bans
+- **Soft Bans**: `?softban @user [reason]` (alias: `?sb`) - Ban and immediately unban to delete messages
+- **Jail System**: `?jail/@unjail/@jaillist` - Role-based punishment with automatic role restoration
+- **User Notes**: `?notes add/remove/clear/@user` - Persistent user annotation system
+- **Thread Management**: `?thread lock/unlock` - Basic thread moderation
 
 ### 🎯 Advanced Lockdown Commands
 - `?lockdown` - Lock current channel
@@ -48,35 +60,59 @@ npm run build && npm start
 ### 🛡️ Security Commands
 - `?antinuke status|on|off` - Anti-nuke protection settings
 - `?settings show|set <path> <value>` - View/modify server settings  
-- `?lockdown [reason]` - Lock current channel
-- `?lockdown all [reason]` - Lock all channels (with confirmation)
+- `?lockdown [reason]` (alias: `?ld`) - Lock current channel
+- `?lockdown all [reason]` - Lock all channels
 - `?lockdown role <@role>` - Set lockdown target role
 - `?lockdown ignore add/remove/list [#channel]` - Manage lockdown ignore list
+- `?unlock all` (alias: `?ul`) - Remove lockdown from all channels
+- `?jail @user <duration> [reason]` - Jail user with role removal (supports 1s, 5m, 2h, 7d, perm)
+- `?unjail @user` - Remove user from jail and restore roles
+- `?jaillist` - List all currently jailed users
+- `?snipe` (alias: `?s`) - Show last deleted message in channel
 
 ### 🔨 Moderation Commands  
-- `?purge <1-100> [reason]` - Delete recent messages
-- `?purge all` - Delete ALL messages (with confirmation)  
+**Enhanced Purge System:**
+- `?purge <1-100> [reason]` (alias: `?p`) - Delete recent messages
+- `?purge all` - Delete ALL messages (no confirmation required)  
 - `?purge between <startId> <endId>` - Delete messages in range
-- `?nuke` - Completely recreate current channel (with confirmation)
-- `?unlock all` - Remove lockdown from all channels
+- `?purge bots` - Delete messages from bots only
+- `?purge humans` - Delete messages from humans only
+- `?purge links` - Delete messages containing links
+- `?purge invites` - Delete messages containing Discord invites
+- `?purge contains <text>` - Delete messages containing specific text
+- `?purge startswith <text>` - Delete messages starting with text
+- `?purge endswith <text>` - Delete messages ending with text
+
+**User Management:**
+- `?kick @user [reason]` (alias: `?k`)
+- `?ban @user [days] [reason]` (alias: `?b`) 
+- `?unban <userId> [reason]` (alias: `?ub`)
+- `?tempban @user <duration> [reason]` (alias: `?tb`) - Temporary ban with auto-unban
+- `?softban @user [reason]` (alias: `?sb`) - Ban and immediately unban to delete messages
+- `?timeout @user <duration> [reason]` (aliases: `?to`, `?mute`)
+
+**User Notes System:**
+- `?notes @user` - View all notes for a user
+- `?notes add @user <note>` - Add a note to a user
+- `?notes remove @user <noteId>` - Remove a specific note
+- `?notes clear @user` - Clear all notes for a user
+
+**Other Moderation:**
+- `?nuke` (alias: `?nk`) - Completely recreate current channel
 - `?thread lock/unlock [reason]` - Lock/unlock current thread
-- `?kick @user [reason]`
-- `?ban @user [days] [reason]` 
-- `?unban <userId> [reason]`
-- `?timeout @user <duration> [reason]`
 - `?lock` / `?unlock` - Channel message permissions
-- `?slowmode <seconds>`
-- `?nick @user <nickname>`
-- `?warn @user <reason>`
-- `?warnings @user`
-- `?clearwarns @user`
+- `?slowmode <seconds>` (alias: `?sm`)
+- `?nick @user <nickname>` (alias: `?nn`)
+- `?warn @user <reason>` (alias: `?w`)
+- `?warnings @user` (alias: `?ws`)
+- `?clearwarns @user` (alias: `?cw`)
 
 ### ⚙️ Utility Commands
-- `?help [command]` - Dynamic help with permission filtering
-- `?prefix` - Show current server prefix
+- `?help [command]` (alias: `?h`) - Dynamic help with permission filtering and aliases
+- `?prefix` (alias: `?px`) - Show current server prefix
 - `?prefix set <symbol>` - Set new prefix (Administrator only)
 - `?prefix remove` - Reset to default prefix (Administrator only)
-- `?botstatus` - Bot statistics and uptime
+- `?botstatus` (aliases: `?bs`, `?status`) - Bot statistics and uptime
 - `?ping` - Bot latency
 - `?avatar [@user]` - User avatar
 - `?userinfo [@user]` - User information
@@ -141,14 +177,62 @@ npm run build && npm start
 ?lockdown ignore add #mod-logs
 ```
 
+## 🌟 Advanced Features & Examples
+
+### Command Aliases System
+Every command now has intuitive short aliases:
+```bash
+?help              # Can also use: ?h
+?purge 50          # Can also use: ?p 50
+?tempban @user 1d  # Can also use: ?tb @user 1d
+?jail @user 2h     # Temporary jail for 2 hours
+?notes add @user "Frequent rule violations"
+```
+
+### Intelligent Purge System
+The enhanced purge system offers precise message filtering:
+```bash
+?purge bots              # Delete only bot messages
+?purge humans            # Delete only human messages  
+?purge links             # Delete messages with URLs
+?purge invites           # Delete Discord invite links
+?purge contains "spam"   # Delete messages containing "spam"
+?purge startswith "!"    # Delete messages starting with "!"
+?purge all               # Delete everything (no confirmation needed)
+```
+
+### Advanced User Management
+```bash
+# Temporary punishments with automatic expiry
+?tempban @user 7d "Repeated violations"    # Auto-unbans in 7 days
+?jail @user 1h "Cooling off period"       # Removes roles, restores after 1h
+?softban @user "Clean up their messages"   # Ban+unban to delete message history
+
+# Persistent user notes for moderation tracking
+?notes add @user "Warning given for spam"
+?notes add @user "Helpful community member"
+?notes @user                               # View all notes
+```
+
+### Permission-Aware Help
+The help system intelligently shows only what you can use:
+- Moderators see moderation commands
+- Administrators see all commands
+- Regular users see only utility commands
+- All commands show their aliases inline
+
+### Visual Gradient Embeds
+All bot responses now feature automatic gradient banners (deep blue → black) for a premium look while maintaining OLED-friendly dark theming.
+
 ## 🔧 Required Permissions
 
 The bot needs these Discord permissions to function properly:
 - **Manage Messages** - Message deletion, purge commands
-- **Manage Channels** - Lockdown, nuke, permission management
+- **Manage Channels** - Lockdown, nuke, permission management  
+- **Manage Roles** - Jail system, role management
 - **Kick Members** - Kick command
-- **Ban Members** - Ban/unban commands  
-- **Moderate Members** - Timeout command
+- **Ban Members** - Ban/unban/tempban/softban commands  
+- **Moderate Members** - Timeout command, notes system
 - **Manage Guild** - Settings management
 - **Manage Expressions** - Emoji management
 - **View Audit Log** - Anti-nuke monitoring
@@ -156,11 +240,14 @@ The bot needs these Discord permissions to function properly:
 
 ## 📊 Data Storage
 
-Settings and data are stored in `data/kv.json`:
+Settings and data are stored in `data/kv.json` and in-memory systems:
 - **Guild Settings**: Prefixes, lockdown config, filter settings
 - **AFK Status**: User away messages and mentions
 - **Embed Templates**: Custom embed storage
 - **Warnings**: User warning tracking
+- **User Notes**: Persistent moderation annotations (in-memory)
+- **Temporary Bans**: Auto-expiring ban system (in-memory)
+- **Jail System**: Role preservation and restoration (in-memory)
 
 ## 🌟 Advanced Usage
 
