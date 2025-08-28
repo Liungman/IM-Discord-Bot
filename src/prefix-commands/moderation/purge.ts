@@ -1,5 +1,5 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
-import { PermissionFlagsBits, type TextChannel, type NewsChannel, type VoiceChannel, type ThreadChannel } from 'discord.js';
+import { PermissionFlagsBits, type TextChannel, type NewsChannel, type VoiceChannel, type ThreadChannel, User } from 'discord.js';
 import { defaultEmbed } from '../../lib/embeds.js';
 
 type BulkDeletableChannel = TextChannel | NewsChannel | VoiceChannel | ThreadChannel;
@@ -9,6 +9,7 @@ const purgeCommand: PrefixCommand = {
   description: 'Bulk delete recent messages (1-100).',
   usage: '?purge <count> [reason]',
   category: 'moderation',
+  aliases: ['p'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.ManageMessages,
   async execute(message, args) {
@@ -43,40 +44,13 @@ const purgeAllCommand: PrefixCommand = {
   async execute(message) {
     if (!message.channel?.isTextBased()) return;
     
-    // Confirm dangerous operation
-    const confirmEmbed = defaultEmbed(message.guild!)
-      .setTitle('⚠️ Purge All Confirmation')
-      .setDescription('This will delete ALL messages in this channel that are less than 14 days old.\n\n**This action cannot be undone!**\n\nType `CONFIRM` to proceed.')
-      .setColor(0xff0000);
-    
-    const confirmMsg = await message.reply({ embeds: [confirmEmbed] });
-    
-    // Wait for confirmation
-    const filter = (m: any) => m.author.id === message.author.id;
-    const collected = await (message.channel as any).awaitMessages({
-      filter,
-      max: 1,
-      time: 30000,
-      errors: ['time']
-    }).catch(() => null);
-    
-    if (!collected || collected.first()?.content !== 'CONFIRM') {
-      const cancelEmbed = defaultEmbed(message.guild!)
-        .setTitle('Purge Cancelled')
-        .setDescription('Operation cancelled or confirmation not received within 30 seconds.')
-        .setColor(0x808080);
-      
-      await confirmMsg.edit({ embeds: [cancelEmbed] });
-      return;
-    }
-    
-    // Start purging
+    // Start purging immediately (no confirmation needed per requirements)
     const statusEmbed = defaultEmbed(message.guild!)
       .setTitle('Purge in Progress')
-      .setDescription('Deleting messages... This may take a while.')
+      .setDescription('Deleting all messages... This may take a while.')
       .setColor(0xffff00);
     
-    await confirmMsg.edit({ embeds: [statusEmbed] });
+    const statusMsg = await message.reply({ embeds: [statusEmbed] });
     
     let totalDeleted = 0;
     let lastBatch = 100;
@@ -94,7 +68,7 @@ const purgeAllCommand: PrefixCommand = {
             .setDescription(`Deleted ${totalDeleted} messages so far...`)
             .setColor(0xffff00);
           
-          await confirmMsg.edit({ embeds: [updateEmbed] });
+          await statusMsg.edit({ embeds: [updateEmbed] });
         }
         
         // Small delay to avoid rate limits
@@ -109,7 +83,7 @@ const purgeAllCommand: PrefixCommand = {
         .addFields({ name: 'Note', value: 'Messages older than 14 days cannot be bulk deleted by Discord\'s API.' })
         .setColor(0x00ff00);
       
-      await confirmMsg.edit({ embeds: [successEmbed] });
+      await statusMsg.edit({ embeds: [successEmbed] });
       
     } catch (error) {
       const errorEmbed = defaultEmbed(message.guild!)
@@ -118,7 +92,7 @@ const purgeAllCommand: PrefixCommand = {
         .addFields({ name: 'Error', value: 'Failed to delete messages. I may lack permissions or messages are too old.' })
         .setColor(0xff0000);
       
-      await confirmMsg.edit({ embeds: [errorEmbed] });
+      await statusMsg.edit({ embeds: [errorEmbed] });
     }
   },
 };
@@ -231,4 +205,221 @@ const purgeBetweenCommand: PrefixCommand = {
   },
 };
 
-export const commands: PrefixCommand[] = [purgeCommand, purgeAllCommand, purgeBetweenCommand];
+// Selective purge commands
+const purgeBotsCommand: PrefixCommand = {
+  name: 'purge bots',
+  description: 'Delete messages from bots (up to 100).',
+  usage: '?purge bots',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message) {
+    if (!message.channel?.isTextBased()) return;
+    await selectivePurge(message, 'bots');
+  },
+};
+
+const purgeHumansCommand: PrefixCommand = {
+  name: 'purge humans',
+  description: 'Delete messages from humans (non-bots) (up to 100).',
+  usage: '?purge humans',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message) {
+    if (!message.channel?.isTextBased()) return;
+    await selectivePurge(message, 'humans');
+  },
+};
+
+const purgeLinksCommand: PrefixCommand = {
+  name: 'purge links',
+  description: 'Delete messages containing links (up to 100).',
+  usage: '?purge links',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message) {
+    if (!message.channel?.isTextBased()) return;
+    await selectivePurge(message, 'links');
+  },
+};
+
+const purgeInvitesCommand: PrefixCommand = {
+  name: 'purge invites',
+  description: 'Delete messages containing Discord invites (up to 100).',
+  usage: '?purge invites',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message) {
+    if (!message.channel?.isTextBased()) return;
+    await selectivePurge(message, 'invites');
+  },
+};
+
+const purgeContainsCommand: PrefixCommand = {
+  name: 'purge contains',
+  description: 'Delete messages containing specific text (up to 100).',
+  usage: '?purge contains <text>',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message, args) {
+    if (!message.channel?.isTextBased()) return;
+    const text = args.join(' ');
+    if (!text) {
+      await message.reply('Please specify text to search for: `?purge contains <text>`');
+      return;
+    }
+    await selectivePurge(message, 'contains', text);
+  },
+};
+
+const purgeStartsWithCommand: PrefixCommand = {
+  name: 'purge startswith',
+  description: 'Delete messages starting with specific text (up to 100).',
+  usage: '?purge startswith <text>',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message, args) {
+    if (!message.channel?.isTextBased()) return;
+    const text = args.join(' ');
+    if (!text) {
+      await message.reply('Please specify text to search for: `?purge startswith <text>`');
+      return;
+    }
+    await selectivePurge(message, 'startswith', text);
+  },
+};
+
+const purgeEndsWithCommand: PrefixCommand = {
+  name: 'purge endswith',
+  description: 'Delete messages ending with specific text (up to 100).',
+  usage: '?purge endswith <text>',
+  category: 'moderation',
+  guildOnly: true,
+  requiredPermissions: PermissionFlagsBits.ManageMessages,
+  async execute(message, args) {
+    if (!message.channel?.isTextBased()) return;
+    const text = args.join(' ');
+    if (!text) {
+      await message.reply('Please specify text to search for: `?purge endswith <text>`');
+      return;
+    }
+    await selectivePurge(message, 'endswith', text);
+  },
+};
+
+// Helper function for selective purging
+async function selectivePurge(message: any, type: string, searchText?: string) {
+  const statusEmbed = defaultEmbed(message.guild!)
+    .setTitle('Selective Purge in Progress')
+    .setDescription(`Scanning messages for ${type}...`)
+    .setColor(0xffff00);
+  
+  const statusMsg = await message.reply({ embeds: [statusEmbed] });
+  
+  try {
+    // Fetch up to 100 messages to filter
+    const messages = await message.channel.messages.fetch({ limit: 100 });
+    
+    const toDelete = [];
+    for (const [, msg] of messages) {
+      let shouldDelete = false;
+      
+      switch (type) {
+        case 'bots':
+          shouldDelete = msg.author.bot;
+          break;
+        case 'humans':
+          shouldDelete = !msg.author.bot;
+          break;
+        case 'links':
+          shouldDelete = /https?:\/\/[^\s]+/i.test(msg.content || '');
+          break;
+        case 'invites':
+          shouldDelete = /(discord\.gg|discordapp\.com\/invite|discord\.com\/invite)\/[a-zA-Z0-9]+/i.test(msg.content || '');
+          break;
+        case 'contains':
+          shouldDelete = searchText ? (msg.content || '').toLowerCase().includes(searchText.toLowerCase()) : false;
+          break;
+        case 'startswith':
+          shouldDelete = searchText ? (msg.content || '').toLowerCase().startsWith(searchText.toLowerCase()) : false;
+          break;
+        case 'endswith':
+          shouldDelete = searchText ? (msg.content || '').toLowerCase().endsWith(searchText.toLowerCase()) : false;
+          break;
+      }
+      
+      if (shouldDelete) {
+        toDelete.push(msg);
+      }
+    }
+    
+    if (toDelete.length === 0) {
+      const noMatchEmbed = defaultEmbed(message.guild!)
+        .setTitle('No Messages Found')
+        .setDescription(`No messages matching "${type}" filter were found in the last 100 messages.`)
+        .setColor(0x808080);
+      
+      await statusMsg.edit({ embeds: [noMatchEmbed] });
+      return;
+    }
+    
+    // Delete in chunks for bulk delete
+    let totalDeleted = 0;
+    const chunks = [];
+    for (let i = 0; i < toDelete.length; i += 100) {
+      chunks.push(toDelete.slice(i, i + 100));
+    }
+    
+    for (const chunk of chunks) {
+      try {
+        if (chunk.length === 1) {
+          await chunk[0].delete();
+          totalDeleted += 1;
+        } else {
+          const result = await (message.channel as BulkDeletableChannel).bulkDelete(chunk, true);
+          totalDeleted += result.size;
+        }
+      } catch {
+        // Continue with next chunk if one fails
+      }
+      
+      if (chunks.length > 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Rate limit protection
+      }
+    }
+    
+    const successEmbed = defaultEmbed(message.guild!)
+      .setTitle('Selective Purge Complete')
+      .setDescription(`Successfully deleted ${totalDeleted} message(s) matching "${type}".`)
+      .addFields({ name: 'Note', value: 'Messages older than 14 days cannot be bulk deleted.' })
+      .setColor(0x00ff00);
+    
+    await statusMsg.edit({ embeds: [successEmbed] });
+    
+  } catch (error) {
+    const errorEmbed = defaultEmbed(message.guild!)
+      .setTitle('Selective Purge Failed')
+      .setDescription('Failed to complete selective purge. I may lack permissions or messages are too old.')
+      .setColor(0xff0000);
+    
+    await statusMsg.edit({ embeds: [errorEmbed] });
+  }
+}
+
+export const commands: PrefixCommand[] = [
+  purgeCommand, 
+  purgeAllCommand, 
+  purgeBetweenCommand, 
+  purgeBotsCommand,
+  purgeHumansCommand,
+  purgeLinksCommand,
+  purgeInvitesCommand,
+  purgeContainsCommand,
+  purgeStartsWithCommand,
+  purgeEndsWithCommand
+];

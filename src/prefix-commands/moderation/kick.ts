@@ -6,6 +6,7 @@ const command: PrefixCommand = {
   description: 'Kick a member.',
   usage: '?kick @user [reason]',
   category: 'moderation',
+  aliases: ['k'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.KickMembers,
   async execute(message, args) {

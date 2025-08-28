@@ -7,6 +7,7 @@ export interface PrefixCommand {
   description: string;
   usage?: string;
   category: PrefixCategory;
+  aliases?: string[];
   requiredPermissions?: PermissionResolvable;
   guildOnly?: boolean;
   execute: (message: Message, args: string[], client: Client) => Promise<void>;

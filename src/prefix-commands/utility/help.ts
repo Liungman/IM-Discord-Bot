@@ -23,6 +23,7 @@ const command: PrefixCommand = {
   description: 'Show command list or details for a command.',
   usage: '?help [command]',
   category: 'utility',
+  aliases: ['h'],
   async execute(message, args, client) {
     const registry = (client as any).prefixCommands as Map<string, PrefixCommand>;
     const name = (args[0] || '').toLowerCase();
@@ -49,7 +50,13 @@ const command: PrefixCommand = {
       
       for (const [cat, cmds] of byCat) {
         const commandList = cmds
-          .map((c) => `${prefix}${c.name}`)
+          .map((c) => {
+            const primary = `${prefix}${c.name}`;
+            const aliases = c.aliases && c.aliases.length > 0 
+              ? ` (${c.aliases.map(a => `${prefix}${a}`).join(', ')})` 
+              : '';
+            return primary + aliases;
+          })
           .join(', ')
           .slice(0, 1000) || '—';
         e.addFields({ name: cat.toUpperCase(), value: commandList });
@@ -78,6 +85,10 @@ const command: PrefixCommand = {
       .addFields(
         ...(cmd.usage ? [{ name: 'Usage', value: cmd.usage.replace(/^\?/, prefix) }] : []),
         { name: 'Category', value: cmd.category },
+        ...(cmd.aliases && cmd.aliases.length > 0 ? [{ 
+          name: 'Aliases', 
+          value: cmd.aliases.map(a => `${prefix}${a}`).join(', ') 
+        }] : [])
       );
     
     if (cmd.requiredPermissions) {
