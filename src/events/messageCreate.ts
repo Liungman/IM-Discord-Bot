@@ -1,5 +1,5 @@
 import type { EventModule } from '../types/event.js';
-import { PermissionsBitField, PermissionFlagsBits, inlineCode, TextChannel } from 'discord.js';
+import { PermissionsBitField, PermissionFlagsBits, inlineCode } from 'discord.js';
 import { errorEmbed } from '../lib/embeds.js';
 import { getGuildSettings } from '../storage/guildSettings.js';
 
@@ -16,7 +16,7 @@ const mod: EventModule = {
     if (message.author.bot || !message.content?.startsWith(PREFIX)) return;
 
     const content = message.content.slice(PREFIX.length).trim();
-    const [rawName, ...rest] = content.split(/\s+/);
+    const [rawName] = content.split(/\s+/);
     const argStr = content.slice(rawName.length).trim();
     const name = rawName.toLowerCase();
     const args = parseArgs(argStr);
@@ -32,7 +32,11 @@ const mod: EventModule = {
 
     // Guild-only check
     if (cmd.guildOnly && !message.guild) {
-      await message.reply({ embeds: [errorEmbed('This command can only be used in a server.')], allowedMentions: { repliedUser: false } });
+      await message.reply({
+        embeds: [errorEmbed('This command can only be used in a server.')],
+        allowedMentions: { repliedUser: false },
+        failIfNotExists: false,
+      });
       return;
     }
 
@@ -40,41 +44,45 @@ const mod: EventModule = {
     if (cmd.requiredPermissions && message.guild) {
       const member = await message.guild.members.fetch(message.author.id).catch(() => null);
       if (!member || !member.permissions.has(new PermissionsBitField(cmd.requiredPermissions))) {
-        await message.reply({ embeds: [errorEmbed('You do not have permission to use this command.')], allowedMentions: { repliedUser: false } });
+        await message.reply({
+          embeds: [errorEmbed('You do not have permission to use this command.')],
+          allowedMentions: { repliedUser: false },
+          failIfNotExists: false,
+        });
         return;
       }
     }
 
-    // Auto-delete setup
+    // Auto-delete configuration
     const settings = message.guild ? getGuildSettings(message.guild.id) : null;
     const autoDeleteMs = settings?.autoDeleteMs ?? 15000;
 
-    // Delete the invoking command if possible
-    if (message.guild && message.guild.members.me?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages)) {
-      message.delete().catch(() => {});
-    }
-
-    // Wrap reply and channel.send to auto-delete bot responses
+    // Wrap message.reply to avoid reply-to-deleted-message and schedule deletion
     const origReply = message.reply.bind(message);
-    (message as any).reply = async (...args: any[]) => {
-      const sent = await origReply(...args);
+    (message as any).reply = async (options: any) => {
+      const payload =
+        typeof options === 'string'
+          ? { content: options, failIfNotExists: false }
+          : { failIfNotExists: false, ...options };
+      const sent = await origReply(payload as any);
       if (autoDeleteMs > 0) setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
       return sent;
     };
-    const ch = message.channel as TextChannel;
-    if (ch && typeof ch.send === 'function') {
-      const origSend = ch.send.bind(ch);
-      (ch as any).send = async (...args: any[]) => {
-        const sent = await origSend(...args);
-        if (autoDeleteMs > 0) setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
-        return sent;
-      };
+
+    // Schedule deletion of the invoking message (after giving time for the bot to respond)
+    const canDeleteInvoker =
+      message.guild?.members.me?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages) ?? false;
+    if (canDeleteInvoker && autoDeleteMs > 0) {
+      setTimeout(() => message.delete().catch(() => {}), autoDeleteMs);
     }
 
     try {
       await cmd.execute(message, args, client);
     } catch (e) {
-      await message.reply({ embeds: [errorEmbed(`Something went wrong executing ${inlineCode(name)}.`)] });
+      await message.reply({
+        embeds: [errorEmbed(`Something went wrong executing ${inlineCode(name)}.`)],
+        failIfNotExists: false,
+      });
     }
   },
 };

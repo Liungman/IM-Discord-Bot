@@ -1,15 +1,18 @@
 # IM Discord Bot
 
-OLED-themed Discord bot (black base with neon dark-blue accent) with lots of classic prefix commands alongside slash support.
+OLED-themed Discord bot with a darker black-and-blue embed style, classic prefix commands, admin/mod tools, and anti-nuke safeguards.
 
 Prefix: `?` (Enable Message Content intent in the Discord Developer Portal.)
 
 ## Features
 
-- OLED embed theme (near-black + neon blue)
+- Dark black-and-blue embed theme
 - Prefix commands with `?` (moderation, security, AFK, embed tools, fun, utility)
 - Usage tracking: `?topcommands`
 - Snipe system: `?snipe` for last deleted message
+- Auto-deleting responses and command invocations (configurable)
+- Rotating presence showing help hint, server count, and ping
+- Bot status command: `?botstatus` (uptime, ping, memory)
 
 ## Setup
 
@@ -33,51 +36,38 @@ Moderation:
 - `?purge 20`
 - `?kick @user spamming`
 - `?ban @user 1 breaking rules`
+- `?unban 123456789012345678 appeal accepted`
 - `?timeout @user 2h take a breather`
 - `?lock` / `?unlock`
 - `?slowmode 5`
 - `?nick @user New Nick`
+- `?warn @user rule 1`
+- `?warnings @user`
+- `?clearwarns @user`
 
 Security/Misc:
 - `?invites`
 - `?addemote <:smile:123456789012345678> smile`
-- `?charinfo abc`
-- `?snipe`
+- `?antinuke status|on|off`
+- `?settings show`
+- `?settings set autoDeleteMs 10000`
+- `?settings set antiNuke.thresholds.ChannelDelete 2`
 
 AFK:
 - `?afk Sleeping`
 - `?afkmentions`
 
 Embed Manager:
+- `?defaultembed Title | Description`
 - `?embedcreate welcome "{ \"title\": \"Welcome!\", \"description\": \"Read the rules.\" }"`
 - `?embedsend welcome`
 - `?embedlist`
 - `?embeddelete welcome`
 - `?embedcode <message link>`
 
-Fun:
-- `?uwu hello friend`
-- `?freaky fear me`
-- `?jumbo 😺`
-- `?rps rock`
-- `?choose red | blue | green`
-- `?wouldyourather`
-- `?randomhex`
-- `?color #00c8ff`
-- `?quickpoll Do you like the OLED theme?`
-- `?coinflip`
-- `?reverse hello`
-- `?leet hello`
-- `?mock hello`
-- `?clap this is great`
-- `?vaporwave hello world`
-- `?fullwidth hello`
-- `?8ball Will this work?`
-- `?dice 3d6`
-- `?joke`
-
-Utility:
+Fun/Utility:
 - `?help [command]`
+- `?botstatus`
 - `?ping`
 - `?avatar @user`
 - `?userinfo [@user]`
@@ -87,5 +77,5 @@ Utility:
 
 ## Notes
 
-- The bot needs appropriate permissions (Manage Messages, Kick Members, Ban Members, Moderate Members, Manage Channels, Manage Guild, Manage Expressions).
-- AFK, embeds, and other data write to `data/kv.json`.
+- The bot needs appropriate permissions (Manage Messages, Kick Members, Ban Members, Moderate Members, Manage Channels, Manage Guild, Manage Expressions, View Audit Log).
+- AFK, embeds, settings and warnings write to `data/kv.json`.
