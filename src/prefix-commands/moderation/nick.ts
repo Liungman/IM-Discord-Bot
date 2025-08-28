@@ -3,25 +3,19 @@ import { PermissionFlagsBits } from 'discord.js';
 
 const command: PrefixCommand = {
   name: 'nick',
-  description: 'Change a user’s nickname.',
+  description: 'Change a member nickname.',
   usage: '?nick @user <new nickname>',
   category: 'moderation',
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.ManageNicknames,
   async execute(message, args) {
     if (!message.guild) return;
-    const user = message.mentions.users.first();
-    if (!user) return void message.reply('Mention a user to rename.');
-    const newNick = args.slice(1).join(' ').trim();
-    if (!newNick) return void message.reply('Provide a new nickname.');
-    const member = await message.guild.members.fetch(user.id).catch(() => null);
-    if (!member) return void message.reply('User not found in this server.');
-    try {
-      await member.setNickname(newNick);
-      await message.reply('Nickname updated.');
-    } catch {
-      await message.reply('Failed to update nickname (check role hierarchy & permissions).');
-    }
+    const member = message.mentions.members?.first() || (await message.guild.members.fetch(args[0]).catch(() => null));
+    if (!member) return void message.reply('Mention a user or provide an ID.');
+    const newNick = (member.id === message.author.id ? args.join(' ') : args.slice(1).join(' ')).trim();
+    if (!newNick) return void message.reply('Provide the new nickname.');
+    await member.setNickname(newNick).catch(() => message.reply('Failed to set nickname.'));
+    await message.reply(`Nickname updated for ${member.user.tag}.`);
   },
 };
 

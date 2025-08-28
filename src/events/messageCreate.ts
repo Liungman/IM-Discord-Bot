@@ -1,6 +1,7 @@
 import type { EventModule } from '../types/event.js';
-import { PermissionsBitField, inlineCode } from 'discord.js';
+import { PermissionsBitField, PermissionFlagsBits, inlineCode, TextChannel } from 'discord.js';
 import { errorEmbed } from '../lib/embeds.js';
+import { getGuildSettings } from '../storage/guildSettings.js';
 
 const PREFIX = '?';
 
@@ -31,7 +32,7 @@ const mod: EventModule = {
 
     // Guild-only check
     if (cmd.guildOnly && !message.guild) {
-      await message.reply({ embeds: [errorEmbed('This command can only be used in a server.')] });
+      await message.reply({ embeds: [errorEmbed('This command can only be used in a server.')], allowedMentions: { repliedUser: false } });
       return;
     }
 
@@ -39,9 +40,35 @@ const mod: EventModule = {
     if (cmd.requiredPermissions && message.guild) {
       const member = await message.guild.members.fetch(message.author.id).catch(() => null);
       if (!member || !member.permissions.has(new PermissionsBitField(cmd.requiredPermissions))) {
-        await message.reply({ embeds: [errorEmbed('You do not have permission to use this command.')] });
+        await message.reply({ embeds: [errorEmbed('You do not have permission to use this command.')], allowedMentions: { repliedUser: false } });
         return;
       }
+    }
+
+    // Auto-delete setup
+    const settings = message.guild ? getGuildSettings(message.guild.id) : null;
+    const autoDeleteMs = settings?.autoDeleteMs ?? 15000;
+
+    // Delete the invoking command if possible
+    if (message.guild && message.guild.members.me?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages)) {
+      message.delete().catch(() => {});
+    }
+
+    // Wrap reply and channel.send to auto-delete bot responses
+    const origReply = message.reply.bind(message);
+    (message as any).reply = async (...args: any[]) => {
+      const sent = await origReply(...args);
+      if (autoDeleteMs > 0) setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
+      return sent;
+    };
+    const ch = message.channel as TextChannel;
+    if (ch && typeof ch.send === 'function') {
+      const origSend = ch.send.bind(ch);
+      (ch as any).send = async (...args: any[]) => {
+        const sent = await origSend(...args);
+        if (autoDeleteMs > 0) setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
+        return sent;
+      };
     }
 
     try {

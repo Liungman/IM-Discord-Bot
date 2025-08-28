@@ -1,8 +1,9 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
+import { defaultEmbed } from '../../lib/embeds.js';
 
 const command: PrefixCommand = {
   name: 'help',
-  description: 'Show available prefix commands',
+  description: 'Show command list or details for a command.',
   usage: '?help [command]',
   category: 'utility',
   async execute(message, args, client) {
@@ -15,17 +16,24 @@ const command: PrefixCommand = {
         if (!byCat.has(cmd.category)) byCat.set(cmd.category, []);
         byCat.get(cmd.category)!.push(cmd);
       }
-      const lines: string[] = [];
+      const e = defaultEmbed(message.guild ?? undefined).setTitle('Help');
       for (const [cat, cmds] of byCat) {
-        lines.push(`• ${cat.toUpperCase()}: ${cmds.map((c) => `?${c.name}`).join(', ')}`);
+        e.addFields({ name: cat.toUpperCase(), value: cmds.map((c) => `?${c.name}`).join(', ').slice(0, 1000) || '—' });
       }
-      await message.reply(lines.join('\n'));
+      await message.reply({ embeds: [e] });
       return;
     }
 
     const cmd = registry.get(name);
-    if (!cmd) return void message.reply('Command not found.');
-    await message.reply(`?${cmd.name} — ${cmd.description}${cmd.usage ? `\nUsage: ${cmd.usage}` : ''}`);
+    if (!cmd) return void message.reply({ content: 'Command not found.' });
+    const e = defaultEmbed(message.guild ?? undefined)
+      .setTitle(`?${cmd.name}`)
+      .setDescription(cmd.description)
+      .addFields(
+        ...(cmd.usage ? [{ name: 'Usage', value: cmd.usage }] : []),
+        { name: 'Category', value: cmd.category },
+      );
+    await message.reply({ embeds: [e] });
   },
 };
 

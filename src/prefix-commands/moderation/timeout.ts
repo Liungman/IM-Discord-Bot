@@ -1,45 +1,31 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
 import { PermissionFlagsBits, userMention } from 'discord.js';
 
-function parseDuration(input: string): number | null {
-  const units: Record<string, number> = { s: 1e3, m: 60e3, h: 3600e3, d: 86400e3 };
-  const re = /(\d+)\s*([smhd])/gi;
-  let total = 0;
-  let m: RegExpExecArray | null;
-  let matched = false;
-  while ((m = re.exec(input))) {
-    matched = true;
-    total += parseInt(m[1], 10) * (units[m[2].toLowerCase()] ?? 0);
-  }
-  return matched && total > 0 ? total : null;
+function parseDuration(s: string): number | null {
+  const m = /^(\d+)(s|m|h|d)$/i.exec(s);
+  if (!m) return null;
+  const n = parseInt(m[1], 10);
+  const mult = m[2].toLowerCase() === 's' ? 1000 : m[2].toLowerCase() === 'm' ? 60000 : m[2].toLowerCase() === 'h' ? 3600000 : 86400000;
+  return n * mult;
 }
 
 const command: PrefixCommand = {
   name: 'timeout',
-  description: 'Timeout a member. Usage: ?timeout @user <10m|2h|1d> [reason]',
+  description: 'Timeout a member for a duration, e.g., 10m, 2h, 1d.',
   usage: '?timeout @user <duration> [reason]',
   category: 'moderation',
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.ModerateMembers,
   async execute(message, args) {
     if (!message.guild) return;
-    const user = message.mentions.users.first();
-    if (!user) return void message.reply('Mention the user to timeout.');
-    const durationArgIndex = user ? 1 : 0;
-    const durStr = args[durationArgIndex];
-    const reason = args.slice(durationArgIndex + 1).join(' ') || 'No reason provided';
-    const ms = parseDuration(durStr || '');
-    if (!ms || ms < 5000 || ms > 28 * 86400e3) return void message.reply('Invalid duration. Try 10m, 2h, 1d.');
-
-    const member = await message.guild.members.fetch(user.id).catch(() => null);
-    if (!member) return void message.reply('User is not in this server.');
-
-    try {
-      await member.timeout(ms, reason);
-      await message.reply(`Timed out ${userMention(user.id)} for ${durStr}.`);
-    } catch {
-      await message.reply('Failed to timeout the user. Check my permissions and role hierarchy.');
-    }
+    const member = message.mentions.members?.first() || (await message.guild.members.fetch(args[0]).catch(() => null));
+    if (!member) return void message.reply('Mention a user or provide an ID.');
+    const ms = parseDuration(args[1] || '');
+    if (!ms) return void message.reply('Provide a valid duration like 10m, 2h, 1d.');
+    const reason = args.slice(2).join(' ') || 'No reason provided';
+    if (!member.moderatable) return void message.reply('I cannot timeout that member.');
+    await member.timeout(ms, reason).catch(() => message.reply('Failed to apply timeout.'));
+    await message.reply(`Timed out ${userMention(member.id)} for ${args[1]}. Reason: ${reason}`);
   },
 };
 
