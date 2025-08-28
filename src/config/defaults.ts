@@ -6,6 +6,10 @@ export const DefaultSettings = {
     startColor: '#1e40af', // deep blue
     endColor: '#000000', // black
   },
+  tempVoice: {
+    categoryId: '', // Category where temp channels are created
+    inactivityTimeoutMs: 5 * 60 * 1000, // 5 minutes
+  },
   lockdown: {
     ignoredChannelIds: [] as string[],
     lockRoleId: '',

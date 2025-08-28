@@ -1,6 +1,6 @@
 # IM Discord Bot
 
-OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix commands, comprehensive moderation tools, anti-raid protection, and advanced security features.
+OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix commands, comprehensive moderation tools, anti-raid protection, advanced security features, music playback, Spotify integration, and temporary voice channels.
 
 **Dynamic Prefix:** Defaults to `?` but configurable per server (Enable Message Content intent in the Discord Developer Portal.)
 
@@ -9,14 +9,37 @@ OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix
 ### 🔧 Dynamic Configuration & Aliases
 - **Dynamic Prefix**: Set custom prefix per server with `?prefix set <symbol>` (alias: `?px`)
 - **Command Aliases**: All commands now have short aliases (e.g., `?help` → `?h`, `?purge` → `?p`)
-- **Permission-Aware Help**: Help command shows only commands you can actually use with aliases displayed
+- **Permission-Aware Help**: Help command shows only commands you can actually use (aliases hidden in main list, shown in details)
 - **Multi-Word Commands**: Support for commands like `lockdown all`, `purge between`, `notes add`, etc.
 - **Instant Command Cleanup**: Commands are deleted immediately to keep channels clean
 
 ### 🎨 Visual Enhancements
-- **Gradient Embeds**: All embeds now feature automatic deep blue to black gradient banners
+- **Configurable Gradient Embeds**: Per-guild gradient settings with position control (top, bottom, thumbnail-bar, or none)
+- **Custom Colors**: Set custom gradient start and end colors per server
 - **Consistent Theming**: Dark OLED-friendly color scheme throughout
 - **Rich Visual Feedback**: Enhanced embed formatting with contextual colors and timestamps
+
+### 🎵 Music System
+- **Voice Playback**: Full-featured music bot with queue management
+- **Queue Commands**: `?queue`, `?queue remove`, `?queue move`, `?queue shuffle`, `?queue empty`
+- **Playback Controls**: `?play`, `?pause`, `?resume`, `?skip`, `?disconnect`
+- **Transport**: `?volume`, `?repeat`, `?shuffle` with full state management
+- **Auto-Join**: Automatically joins your voice channel on play
+- **Auto-Leave**: Leaves after inactivity timeout
+- **Per-Guild Players**: Independent music state per server
+
+### 🎧 Spotify Integration (Optional)
+- **OAuth Login**: `?spotify login` with secure web-based authentication
+- **Playback Control**: `?spotify play/pause/next/previous/current`
+- **Account Status**: `?spotify status` to check connection
+- **Device Management**: Works with your active Spotify devices
+- **Secure Token Storage**: Per-user token management with refresh support
+
+### 🔊 Temporary Voice Channels
+- **Dynamic Creation**: `?tvoice create [name] [--limit N]` for on-demand voice channels
+- **Permission Management**: `?tvoice lock/unlock`, `?tvoice invite/remove @user`
+- **Auto-Cleanup**: Channels automatically deleted when empty after timeout
+- **Owner Controls**: Full permission management for channel creators
 
 ### 🛡️ Enhanced Security & Moderation
 - **Advanced Purge System**: Multiple purge modes with no confirmation required:
@@ -44,9 +67,15 @@ OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix
 1) Create `.env` and set:
    ```
    DISCORD_TOKEN=your_token_here
+   
+   # Optional Spotify integration
+   SPOTIFY_CLIENT_ID=your_spotify_client_id
+   SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
+   SPOTIFY_REDIRECT_URI=http://localhost:3000/callback
    ```
 2) In the Discord Developer Portal, turn on "Message Content Intent".
-3) Install and run:
+3) For Spotify: Create a Spotify app at https://developer.spotify.com/dashboard and set the redirect URI
+4) Install and run:
 
 ```bash
 npm ci
@@ -56,6 +85,38 @@ npm run build && npm start
 ```
 
 ## 📋 Command Categories
+
+### 🎵 Music Commands
+- `?play [next] <query|url>` (alias: `?p`) - Play or queue a song (use "next" to add to front)
+- `?queue` (alias: `?q`) - Display current queue
+- `?queue remove <position>` - Remove song from queue
+- `?queue move <from> <to>` - Move song position in queue  
+- `?queue shuffle` - Shuffle the queue
+- `?queue empty` - Clear the entire queue
+- `?pause` - Pause current song
+- `?resume` - Resume paused song
+- `?skip` (aliases: `?s`, `?next`) - Skip current song
+- `?disconnect` (aliases: `?dc`, `?leave`, `?stop`) - Disconnect and clear queue
+- `?volume <0-200>` (alias: `?vol`) - Set playback volume
+- `?repeat <off|one|all>` (alias: `?loop`) - Set repeat mode
+- `?shuffle` - Shuffle current queue
+
+### 🎧 Spotify Commands (Optional - requires setup)
+- `?spotify login` - Connect your Spotify account
+- `?spotify logout` - Disconnect your Spotify account  
+- `?spotify status` - Check connection status
+- `?spotify play` - Resume Spotify playback
+- `?spotify pause` - Pause Spotify playback
+- `?spotify next` - Skip to next track
+- `?spotify previous` (alias: `?spotify prev`) - Previous track
+- `?spotify current` (aliases: `?spotify now`, `?spotify np`) - Show current track
+
+### 🔊 Voice Channel Commands
+- `?tvoice create [name] [--limit N]` - Create temporary voice channel
+- `?tvoice lock` - Lock your temp channel (prevent joins)
+- `?tvoice unlock` - Unlock your temp channel
+- `?tvoice invite @user` - Allow user to join your temp channel
+- `?tvoice remove @user` - Remove user from your temp channel
 
 ### 🛡️ Security Commands
 - `?antinuke status|on|off` - Anti-nuke protection settings
@@ -108,7 +169,8 @@ npm run build && npm start
 - `?clearwarns @user` (alias: `?cw`)
 
 ### ⚙️ Utility Commands
-- `?help [command]` (alias: `?h`) - Dynamic help with permission filtering and aliases
+- `?help [command]` (alias: `?h`) - Dynamic help with permission filtering (aliases hidden in main view)
+- `?gradient` - Configure embed gradient settings (position, colors)
 - `?prefix` (alias: `?px`) - Show current server prefix
 - `?prefix set <symbol>` - Set new prefix (Administrator only)
 - `?prefix remove` - Reset to default prefix (Administrator only)
@@ -163,6 +225,14 @@ npm run build && npm start
 # Set custom prefix
 ?prefix set !
 
+# Configure gradient embeds
+?gradient position top
+?gradient colors #ff0000 #0000ff
+
+# Configure temp voice channel category (via settings)
+?settings set tempVoice.categoryId 123456789012345678
+?settings set tempVoice.inactivityTimeoutMs 300000  # 5 minutes
+
 # Configure anti-raid (via settings command)
 ?settings set antiRaid.enabled true
 ?settings set antiRaid.joinThreshold 10  
@@ -178,6 +248,55 @@ npm run build && npm start
 ```
 
 ## 🌟 Advanced Features & Examples
+
+### Music System Usage
+```bash
+# Basic playback
+?play Never Gonna Give You Up        # Search and play
+?play https://youtube.com/watch?v=... # Direct URL
+?play next Bohemian Rhapsody        # Add to front of queue
+
+# Queue management  
+?queue                               # Show current queue
+?queue remove 3                      # Remove 3rd song
+?queue move 5 1                      # Move 5th song to 1st position
+?queue shuffle                       # Randomize queue order
+?volume 150                          # Set to 150% volume
+?repeat all                          # Loop entire queue
+```
+
+### Spotify Integration Setup
+1. Create a Spotify app at https://developer.spotify.com/dashboard
+2. Set redirect URI to `http://localhost:3000/callback`
+3. Add client ID and secret to your `.env` file
+4. Use `?spotify login` to authenticate
+
+```bash
+# Spotify usage examples
+?spotify login                       # Connect your account
+?spotify current                     # See what's playing
+?spotify next                        # Skip track on Spotify
+?spotify pause                       # Pause your music
+```
+
+### Temporary Voice Channels
+```bash
+# Create and manage temp channels
+?tvoice create Gaming Session        # Named channel
+?tvoice create --limit 5             # With user limit
+?tvoice lock                         # Prevent others from joining
+?tvoice invite @friend              # Allow specific user
+?tvoice remove @troublemaker        # Remove and ban user
+```
+
+### Visual Customization
+```bash
+# Gradient embed configuration
+?gradient position top               # Gradient at top of embeds
+?gradient position thumbnail-bar     # Small gradient as thumbnail
+?gradient position none              # Disable gradients
+?gradient colors #ff6b35 #004e92     # Custom orange to blue gradient
+```
 
 ### Command Aliases System
 Every command now has intuitive short aliases:
@@ -219,16 +338,19 @@ The help system intelligently shows only what you can use:
 - Moderators see moderation commands
 - Administrators see all commands
 - Regular users see only utility commands
-- All commands show their aliases inline
+- **Aliases are now hidden in the main help list** (shown only in detailed command help)
 
 ### Visual Gradient Embeds
-All bot responses now feature automatic gradient banners (deep blue → black) for a premium look while maintaining OLED-friendly dark theming.
+- **Per-guild configuration**: Each server can customize gradient position and colors
+- **Multiple positions**: Top banner, bottom banner, or thumbnail-bar
+- **Custom colors**: Set any hex colors for gradient start and end
+- **OLED-friendly**: Maintains dark theming while adding visual appeal
 
 ## 🔧 Required Permissions
 
 The bot needs these Discord permissions to function properly:
 - **Manage Messages** - Message deletion, purge commands
-- **Manage Channels** - Lockdown, nuke, permission management  
+- **Manage Channels** - Lockdown, nuke, permission management, temp voice channels  
 - **Manage Roles** - Jail system, role management
 - **Kick Members** - Kick command
 - **Ban Members** - Ban/unban/tempban/softban commands  
@@ -237,17 +359,24 @@ The bot needs these Discord permissions to function properly:
 - **Manage Expressions** - Emoji management
 - **View Audit Log** - Anti-nuke monitoring
 - **Manage Threads** - Thread lock/unlock
+- **Connect** - Voice channel access for music
+- **Speak** - Voice playback for music
+- **Use Voice Activity** - Voice connection management
+- **Move Members** - Temp voice channel management
 
 ## 📊 Data Storage
 
 Settings and data are stored in `data/kv.json` and in-memory systems:
-- **Guild Settings**: Prefixes, lockdown config, filter settings
+- **Guild Settings**: Prefixes, lockdown config, filter settings, gradient config, temp voice settings
 - **AFK Status**: User away messages and mentions
 - **Embed Templates**: Custom embed storage
 - **Warnings**: User warning tracking
 - **User Notes**: Persistent moderation annotations (in-memory)
 - **Temporary Bans**: Auto-expiring ban system (in-memory)
 - **Jail System**: Role preservation and restoration (in-memory)
+- **Spotify Tokens**: Per-user authentication tokens (persistent)
+- **Music Queues**: Per-guild music state (in-memory)
+- **Temp Voice Channels**: Channel tracking and cleanup (in-memory)
 
 ## 🌟 Advanced Usage
 
