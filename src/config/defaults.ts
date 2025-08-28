@@ -1,6 +1,11 @@
 export const DefaultSettings = {
   prefix: '?',
   autoDeleteMs: 15000,
+  gradient: {
+    position: 'none' as 'top' | 'bottom' | 'thumbnail-bar' | 'none',
+    startColor: '#1e40af', // deep blue
+    endColor: '#000000', // black
+  },
   lockdown: {
     ignoredChannelIds: [] as string[],
     lockRoleId: '',

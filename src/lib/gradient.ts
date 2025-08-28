@@ -62,3 +62,24 @@ export function createGradientBanner(
 export function getDefaultGradientBanner(): AttachmentBuilder | null {
   return createGradientBanner(); // Uses default deep blue to black gradient
 }
+
+export function getGuildGradientBanner(
+  position: 'top' | 'bottom' | 'thumbnail-bar' | 'none',
+  startColor: string,
+  endColor: string
+): AttachmentBuilder | null {
+  if (position === 'none') return null;
+  
+  // Adjust dimensions based on position
+  let width = 400;
+  let height = 100;
+  
+  if (position === 'thumbnail-bar') {
+    width = 80;
+    height = 80;
+  } else if (position === 'bottom') {
+    height = 50; // Smaller height for bottom banner
+  }
+  
+  return createGradientBanner(width, height, startColor, endColor);
+}
