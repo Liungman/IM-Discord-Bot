@@ -3,8 +3,6 @@ import { PermissionsBitField, PermissionFlagsBits, inlineCode } from 'discord.js
 import { errorEmbed } from '../lib/embeds.js';
 import { getGuildSettings } from '../storage/guildSettings.js';
 
-const PREFIX = '?';
-
 function parseArgs(str: string): string[] {
   const m = str.match(/(?:\"[^\"]+\"|\S+)/g) ?? [];
   return m.map((a) => (a.startsWith('"') && a.endsWith('"') ? a.slice(1, -1) : a));
@@ -13,30 +11,80 @@ function parseArgs(str: string): string[] {
 const mod: EventModule = {
   name: 'messageCreate',
   async execute(client, message) {
-    if (message.author.bot || !message.content?.startsWith(PREFIX)) return;
+    if (message.author.bot) return;
 
-    const content = message.content.slice(PREFIX.length).trim();
-    const [rawName] = content.split(/\s+/);
-    const argStr = content.slice(rawName.length).trim();
-    const name = rawName.toLowerCase();
-    const args = parseArgs(argStr);
+    // Get dynamic prefix from guild settings
+    const settings = message.guild ? getGuildSettings(message.guild.id) : null;
+    const prefix = settings?.prefix ?? '?';
+    
+    if (!message.content?.startsWith(prefix)) return;
 
+    const content = message.content.slice(prefix.length).trim();
+    if (!content) return;
+
+    const tokens = content.split(/\s+/);
     const registry = (client as any).prefixCommands as Map<string, any>;
     const usage = (client as any).commandUsage as Map<string, number>;
 
-    const cmd = registry.get(name);
+    // Try multi-word command names: 3-word, 2-word, then 1-word
+    let cmd: any = null;
+    let commandName = '';
+    let argStartIndex = 0;
+
+    // Try 3-word command first
+    if (tokens.length >= 3) {
+      const threeWord = tokens.slice(0, 3).join(' ').toLowerCase();
+      if (registry.has(threeWord)) {
+        cmd = registry.get(threeWord);
+        commandName = threeWord;
+        argStartIndex = 3;
+      }
+    }
+
+    // Try 2-word command if 3-word failed
+    if (!cmd && tokens.length >= 2) {
+      const twoWord = tokens.slice(0, 2).join(' ').toLowerCase();
+      if (registry.has(twoWord)) {
+        cmd = registry.get(twoWord);
+        commandName = twoWord;
+        argStartIndex = 2;
+      }
+    }
+
+    // Try 1-word command if 2-word failed
+    if (!cmd) {
+      const oneWord = tokens[0].toLowerCase();
+      if (registry.has(oneWord)) {
+        cmd = registry.get(oneWord);
+        commandName = oneWord;
+        argStartIndex = 1;
+      }
+    }
+
     if (!cmd) return;
 
+    // Parse arguments starting after the command name
+    const argStr = tokens.slice(argStartIndex).join(' ');
+    const args = parseArgs(argStr);
+
     // Usage tracking
-    usage.set(name, (usage.get(name) ?? 0) + 1);
+    usage.set(commandName, (usage.get(commandName) ?? 0) + 1);
+
+    // Instantly delete the invoking message to avoid reply errors
+    const canDeleteInvoker =
+      message.guild?.members.me?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages) ?? false;
+    if (canDeleteInvoker) {
+      message.delete().catch(() => {}); // Delete immediately, don't wait
+    }
 
     // Guild-only check
     if (cmd.guildOnly && !message.guild) {
-      await message.reply({
-        embeds: [errorEmbed('This command can only be used in a server.')],
-        allowedMentions: { repliedUser: false },
-        failIfNotExists: false,
-      });
+      if (message.channel?.type !== 'DM' && 'send' in message.channel) {
+        await message.channel.send({
+          embeds: [errorEmbed('This command can only be used in a server.')],
+          allowedMentions: { repliedUser: false },
+        });
+      }
       return;
     }
 
@@ -44,45 +92,44 @@ const mod: EventModule = {
     if (cmd.requiredPermissions && message.guild) {
       const member = await message.guild.members.fetch(message.author.id).catch(() => null);
       if (!member || !member.permissions.has(new PermissionsBitField(cmd.requiredPermissions))) {
-        await message.reply({
-          embeds: [errorEmbed('You do not have permission to use this command.')],
-          allowedMentions: { repliedUser: false },
-          failIfNotExists: false,
-        });
+        if (message.channel?.type !== 'DM' && 'send' in message.channel) {
+          await message.channel.send({
+            embeds: [errorEmbed('You do not have permission to use this command.')],
+            allowedMentions: { repliedUser: false },
+          });
+        }
         return;
       }
     }
 
-    // Auto-delete configuration
-    const settings = message.guild ? getGuildSettings(message.guild.id) : null;
+    // Auto-delete configuration for responses
     const autoDeleteMs = settings?.autoDeleteMs ?? 15000;
 
-    // Wrap message.reply to avoid reply-to-deleted-message and schedule deletion
-    const origReply = message.reply.bind(message);
+    // Replace message.reply with channel.send to avoid MESSAGE_REFERENCE_UNKNOWN_MESSAGE
     (message as any).reply = async (options: any) => {
+      if (!message.channel || !('send' in message.channel)) return;
+      
       const payload =
         typeof options === 'string'
-          ? { content: options, failIfNotExists: false }
-          : { failIfNotExists: false, ...options };
-      const sent = await origReply(payload as any);
-      if (autoDeleteMs > 0) setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
+          ? { content: options, allowedMentions: { repliedUser: false } }
+          : { allowedMentions: { repliedUser: false }, ...options };
+      
+      const sent = await message.channel.send(payload as any);
+      if (autoDeleteMs > 0) {
+        setTimeout(() => sent.delete().catch(() => {}), autoDeleteMs);
+      }
       return sent;
     };
-
-    // Schedule deletion of the invoking message (after giving time for the bot to respond)
-    const canDeleteInvoker =
-      message.guild?.members.me?.permissionsIn(message.channelId).has(PermissionFlagsBits.ManageMessages) ?? false;
-    if (canDeleteInvoker && autoDeleteMs > 0) {
-      setTimeout(() => message.delete().catch(() => {}), autoDeleteMs);
-    }
 
     try {
       await cmd.execute(message, args, client);
     } catch (e) {
-      await message.reply({
-        embeds: [errorEmbed(`Something went wrong executing ${inlineCode(name)}.`)],
-        failIfNotExists: false,
-      });
+      if (message.channel && 'send' in message.channel) {
+        await message.channel.send({
+          embeds: [errorEmbed(`Something went wrong executing ${inlineCode(commandName)}.`)],
+          allowedMentions: { repliedUser: false },
+        });
+      }
     }
   },
 };
