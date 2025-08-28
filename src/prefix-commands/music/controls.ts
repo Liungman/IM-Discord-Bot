@@ -1,7 +1,27 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
-import { GuildMember, VoiceChannel } from 'discord.js';
+import { GuildMember, VoiceChannel, StageChannel } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../lib/embeds.js';
 import { PlayerManager } from '../../lib/PlayerManager.js';
+
+// Helper function to check voice channel access - reusable across music commands
+async function checkVoiceAccess(message: any) {
+  if (!message.guild) return { error: 'This command can only be used in servers.' };
+
+  // Robust member fetching
+  let member: GuildMember;
+  try {
+    member = await message.guild.members.fetch(message.author.id);
+  } catch (error) {
+    return { error: 'Failed to fetch your member information. Please try again.' };
+  }
+
+  const voiceChannel = member.voice?.channel;
+  if (!voiceChannel || !(voiceChannel instanceof VoiceChannel || voiceChannel instanceof StageChannel)) {
+    return { error: 'You must be in a voice channel to use music commands!' };
+  }
+
+  return { member, voiceChannel };
+}
 
 const volumeCommand: PrefixCommand = {
   name: 'volume',
@@ -11,17 +31,13 @@ const volumeCommand: PrefixCommand = {
   aliases: ['vol'],
   guildOnly: true,
   async execute(message, args) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (args.length === 0) {
       await message.reply({ embeds: [successEmbed(`🔊 Current volume: **${player.volume}%**`)] });
@@ -47,17 +63,13 @@ const repeatCommand: PrefixCommand = {
   aliases: ['loop'],
   guildOnly: true,
   async execute(message, args) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (args.length === 0) {
       const modeEmoji = player.repeatMode === 'off' ? '➡️' : player.repeatMode === 'one' ? '🔂' : '🔁';
@@ -82,19 +94,16 @@ const shuffleCommand: PrefixCommand = {
   description: 'Shuffle the current queue.',
   usage: '?shuffle',
   category: 'music',
+  aliases: ['mix'],
   guildOnly: true,
   async execute(message) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (player.queue.length === 0) {
       await message.reply({ embeds: [errorEmbed('The queue is empty!')] });

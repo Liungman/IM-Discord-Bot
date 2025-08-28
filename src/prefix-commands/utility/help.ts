@@ -26,6 +26,7 @@ const command: PrefixCommand = {
   aliases: ['h'],
   async execute(message, args, client) {
     const registry = (client as any).prefixCommands as Map<string, PrefixCommand>;
+    const canonicalRegistry = (client as any).canonicalCommands as Map<string, PrefixCommand>;
     const name = (args[0] || '').toLowerCase();
     
     // Get dynamic prefix
@@ -38,8 +39,11 @@ const command: PrefixCommand = {
     if (!name) {
       const byCat = new Map<string, PrefixCommand[]>();
       
+      // Use canonical commands to avoid duplicates
+      const commandSource = canonicalRegistry || registry;
+      
       // Filter commands by what the user can actually use
-      for (const cmd of registry.values()) {
+      for (const cmd of commandSource.values()) {
         if (!canUse(member, cmd, message.guild)) continue;
         
         if (!byCat.has(cmd.category)) byCat.set(cmd.category, []);
@@ -49,7 +53,9 @@ const command: PrefixCommand = {
       const e = defaultEmbed(message.guild ?? undefined).setTitle('Help - Available Commands');
       
       for (const [cat, cmds] of byCat) {
-        const commandList = cmds
+        // Sort commands by name for consistent display
+        const sortedCmds = cmds.sort((a, b) => a.name.localeCompare(b.name));
+        const commandList = sortedCmds
           .map((c) => `${prefix}${c.name}`)
           .join(', ')
           .slice(0, 1000) || '—';
