@@ -1,4 +1,6 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
+import { TextChannel } from 'discord.js';
+
 const command: PrefixCommand = {
   name: 'quickpoll',
   description: 'Add up/down reactions to start a quick poll',
@@ -8,11 +10,14 @@ const command: PrefixCommand = {
   async execute(message, args) {
     const question = args.join(' ').trim();
     if (!question) return void message.reply('Provide a question, e.g. ?quickpoll Do you like this bot?');
-    const sent = await message.channel.send(`📊 ${question}\nReact below to vote!`);
+    const sent = await (message.channel as TextChannel).send(`📊 ${question}\nReact below to vote!`);
     try {
       await sent.react('👍');
       await sent.react('👎');
-    } catch {}
+    } catch {
+      // ignore reaction errors
+    }
   },
 };
+
 export default command;

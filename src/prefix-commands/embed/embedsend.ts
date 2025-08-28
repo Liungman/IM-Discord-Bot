@@ -1,5 +1,6 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
 import { getEmbed } from '../../storage/embeds.js';
+import { TextChannel } from 'discord.js';
 
 const command: PrefixCommand = {
   name: 'embedsend',
@@ -12,7 +13,7 @@ const command: PrefixCommand = {
     if (!name) return void message.reply('Usage: ?embedsend <name>');
     const e = getEmbed(message.guild!.id, name);
     if (!e) return void message.reply('No embed stored with that name.');
-    await message.channel.send({ embeds: [e] });
+    await (message.channel as TextChannel).send({ embeds: [e] });
   },
 };
 
