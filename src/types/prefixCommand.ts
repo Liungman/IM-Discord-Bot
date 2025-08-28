@@ -1,6 +1,6 @@
 import type { Client, Message, PermissionResolvable } from 'discord.js';
 
-export type PrefixCategory = 'fun' | 'utility' | 'moderation' | 'security' | 'afk' | 'embed';
+export type PrefixCategory = 'fun' | 'utility' | 'moderation' | 'security' | 'afk' | 'embed' | 'music' | 'spotify' | 'voice';
 
 export interface PrefixCommand {
   name: string;

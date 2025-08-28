@@ -50,13 +50,7 @@ const command: PrefixCommand = {
       
       for (const [cat, cmds] of byCat) {
         const commandList = cmds
-          .map((c) => {
-            const primary = `${prefix}${c.name}`;
-            const aliases = c.aliases && c.aliases.length > 0 
-              ? ` (${c.aliases.map(a => `${prefix}${a}`).join(', ')})` 
-              : '';
-            return primary + aliases;
-          })
+          .map((c) => `${prefix}${c.name}`)
           .join(', ')
           .slice(0, 1000) || '—';
         e.addFields({ name: cat.toUpperCase(), value: commandList });

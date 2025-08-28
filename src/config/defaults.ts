@@ -1,6 +1,15 @@
 export const DefaultSettings = {
   prefix: '?',
   autoDeleteMs: 15000,
+  gradient: {
+    position: 'none' as 'top' | 'bottom' | 'thumbnail-bar' | 'none',
+    startColor: '#1e40af', // deep blue
+    endColor: '#000000', // black
+  },
+  tempVoice: {
+    categoryId: '', // Category where temp channels are created
+    inactivityTimeoutMs: 5 * 60 * 1000, // 5 minutes
+  },
   lockdown: {
     ignoredChannelIds: [] as string[],
     lockRoleId: '',

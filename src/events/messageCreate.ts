@@ -2,7 +2,7 @@ import type { EventModule } from '../types/event.js';
 import { PermissionsBitField, PermissionFlagsBits, inlineCode } from 'discord.js';
 import { errorEmbed } from '../lib/embeds.js';
 import { getGuildSettings } from '../storage/guildSettings.js';
-import { getDefaultGradientBanner } from '../lib/gradient.js';
+import { getGuildGradientBanner } from '../lib/gradient.js';
 
 function parseArgs(str: string): string[] {
   const m = str.match(/(?:\"[^\"]+\"|\S+)/g) ?? [];
@@ -115,21 +115,32 @@ const mod: EventModule = {
           ? { content: options, allowedMentions: { repliedUser: false } }
           : { allowedMentions: { repliedUser: false }, ...options };
       
-      // Auto-inject gradient banner into embeds if no image is set
-      if (payload.embeds && Array.isArray(payload.embeds)) {
-        const gradientBanner = getDefaultGradientBanner();
+      // Auto-inject gradient banner into embeds based on guild settings
+      if (payload.embeds && Array.isArray(payload.embeds) && message.guild) {
+        const guildSettings = getGuildSettings(message.guild.id);
+        const gradientBanner = getGuildGradientBanner(
+          guildSettings.gradient.position,
+          guildSettings.gradient.startColor,
+          guildSettings.gradient.endColor
+        );
+        
         if (gradientBanner) {
-          // Check if any embed lacks an image and inject gradient
-          let hasEmbedWithoutImage = false;
+          // Check if any embed lacks an image/thumbnail and inject gradient based on position
+          let hasEmbedForGradient = false;
           for (const embed of payload.embeds) {
-            if (embed && typeof embed === 'object' && !embed.image && !embed.thumbnail) {
-              embed.image = { url: 'attachment://gradient.png' };
-              hasEmbedWithoutImage = true;
+            if (embed && typeof embed === 'object') {
+              if (guildSettings.gradient.position === 'thumbnail-bar' && !embed.thumbnail) {
+                embed.thumbnail = { url: 'attachment://gradient.png' };
+                hasEmbedForGradient = true;
+              } else if ((guildSettings.gradient.position === 'top' || guildSettings.gradient.position === 'bottom') && !embed.image) {
+                embed.image = { url: 'attachment://gradient.png' };
+                hasEmbedForGradient = true;
+              }
             }
           }
           
           // Only attach the gradient if we actually used it
-          if (hasEmbedWithoutImage) {
+          if (hasEmbedForGradient) {
             payload.files = payload.files || [];
             if (Array.isArray(payload.files)) {
               payload.files.push(gradientBanner);
