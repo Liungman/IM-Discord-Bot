@@ -20,13 +20,42 @@ export async function loadPrefixCommands(client: Client & { prefixCommands: Map<
   let loaded = 0;
   for (const file of files) {
     const mod = await import(pathToFileURL(file).href);
-    const command: PrefixCommand | undefined = mod.default || mod.command;
-    if (!command?.name || !command?.execute) {
-      logger.warn({ file }, 'Skipping invalid prefix command module');
+    
+    // Support both single command and array of commands
+    const commands: PrefixCommand[] = [];
+    
+    // Check for default export (single command or array)
+    const defaultExport = mod.default;
+    if (Array.isArray(defaultExport)) {
+      commands.push(...defaultExport);
+    } else if (defaultExport?.name && defaultExport?.execute) {
+      commands.push(defaultExport);
+    }
+    
+    // Check for named export 'commands' (array)
+    if (mod.commands && Array.isArray(mod.commands)) {
+      commands.push(...mod.commands);
+    }
+    
+    // Legacy fallback for 'command' export
+    if (mod.command?.name && mod.command?.execute) {
+      commands.push(mod.command);
+    }
+    
+    if (commands.length === 0) {
+      logger.warn({ file }, 'Skipping invalid prefix command module - no valid commands found');
       continue;
     }
-    client.prefixCommands.set(command.name.toLowerCase(), command);
-    loaded++;
+    
+    // Register all commands from this module
+    for (const command of commands) {
+      if (!command?.name || !command?.execute) {
+        logger.warn({ file, commandName: command?.name }, 'Skipping invalid command in module');
+        continue;
+      }
+      client.prefixCommands.set(command.name.toLowerCase(), command);
+      loaded++;
+    }
   }
   logger.info({ count: loaded }, 'Prefix commands loaded');
 }

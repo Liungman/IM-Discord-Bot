@@ -1,5 +1,27 @@
 export const DefaultSettings = {
+  prefix: '?',
   autoDeleteMs: 15000,
+  lockdown: {
+    ignoredChannelIds: [] as string[],
+    lockRoleId: '',
+  },
+  filters: {
+    links: {
+      enabled: false,
+      perChannel: {} as Record<string, { enabled: boolean; whitelist: string[]; exemptRoleIds: string[] }>,
+    },
+    invites: {
+      enabled: false,
+      perChannel: {} as Record<string, { enabled: boolean; exemptRoleIds: string[] }>,
+    },
+  },
+  antiRaid: {
+    enabled: true,
+    windowMs: 60_000,
+    joinThreshold: 8,
+    action: { type: 'lockdown', minutes: 10 },
+    logChannelId: '',
+  },
   antiNuke: {
     enabled: true,
     windowMs: 5 * 60 * 1000,
