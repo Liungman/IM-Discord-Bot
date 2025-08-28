@@ -14,6 +14,7 @@ const command: PrefixCommand = {
   description: 'Timeout a member for a duration, e.g., 10m, 2h, 1d.',
   usage: '?timeout @user <duration> [reason]',
   category: 'moderation',
+  aliases: ['to', 'mute'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.ModerateMembers,
   async execute(message, args) {

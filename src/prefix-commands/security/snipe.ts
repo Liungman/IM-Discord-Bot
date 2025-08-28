@@ -7,6 +7,7 @@ const command: PrefixCommand = {
   description: 'Show the last deleted message in this channel.',
   usage: '?snipe',
   category: 'security',
+  aliases: ['s'],
   guildOnly: true,
   async execute(message) {
     const s = getSnipe(message.channel.id);

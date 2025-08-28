@@ -16,6 +16,7 @@ const command: PrefixCommand = {
   description: 'Show bot status: uptime, ping, memory, guilds.',
   usage: '?botstatus',
   category: 'utility',
+  aliases: ['bs', 'status'],
   async execute(message, _args, client) {
     const uptimeMs = client.uptime ?? 0;
     const ping = Math.round(client.ws.ping);

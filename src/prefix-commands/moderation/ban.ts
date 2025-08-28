@@ -6,6 +6,7 @@ const command: PrefixCommand = {
   description: 'Ban a member and optionally delete recent messages (0-7 days).',
   usage: '?ban @user [days] [reason]',
   category: 'moderation',
+  aliases: ['b'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.BanMembers,
   async execute(message, args) {

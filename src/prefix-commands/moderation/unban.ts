@@ -6,6 +6,7 @@ const command: PrefixCommand = {
   description: 'Unban a user by ID.',
   usage: '?unban <userId> [reason]',
   category: 'moderation',
+  aliases: ['ub'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.BanMembers,
   async execute(message, args) {
