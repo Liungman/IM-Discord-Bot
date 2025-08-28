@@ -2,6 +2,7 @@ import type { PrefixCommand } from '../../types/prefixCommand.js';
 import { GuildMember, VoiceChannel, StageChannel, PermissionFlagsBits } from 'discord.js';
 import { defaultEmbed, errorEmbed, successEmbed } from '../../lib/embeds.js';
 import { PlayerManager } from '../../lib/PlayerManager.js';
+import { search as searchYouTube } from 'play-dl';
 
 const command: PrefixCommand = {
   name: 'play',
@@ -85,85 +86,115 @@ const command: PrefixCommand = {
       }
     }
 
-    // Process the query/URL - for now this is still mock but structured for future implementation
-    const track = await processQuery(query, message.author.id);
+    // Show searching message
+    const searchingEmbed = defaultEmbed(message.guild)
+      .setDescription(`🔍 Searching for: **${query}**`);
+    const searchMessage = await message.reply({ embeds: [searchingEmbed] });
 
-    if (!track) {
-      await message.reply({ embeds: [errorEmbed('Failed to process the query. Please try again.')] });
-      return;
-    }
+    try {
+      // Process the query/URL and get track information
+      const track = await processQuery(query, message.author.id);
 
-    if (playNext) {
-      player.addToQueueNext(track);
-      await message.reply({ 
-        embeds: [successEmbed(`Added to front of queue: **${track.title}** (Position: 1)`)] 
-      });
-    } else {
-      player.addToQueue(track);
-      const position = player.queue.length;
-      await message.reply({ 
-        embeds: [successEmbed(`Added to queue: **${track.title}** (Position: ${position})`)] 
-      });
-    }
-
-    // Start playing if nothing is currently playing
-    if (!player.currentTrack && player.queue.length > 0) {
-      const success = await player.play();
-      if (success) {
-        // Small delay to ensure currentTrack is set
-        setTimeout(async () => {
-          const currentTrack = player.currentTrack;
-          if (currentTrack) {
-            const embed = defaultEmbed(message.guild!)
-              .setTitle('🎵 Now Playing')
-              .setDescription(`**${currentTrack.title}**`)
-              .addFields(
-                { name: 'Requested by', value: `<@${currentTrack.requestedBy}>`, inline: true },
-                { name: 'Queue length', value: `${player.queue.length} songs`, inline: true }
-              );
-            
-            if ('send' in message.channel) {
-              await message.channel.send({ embeds: [embed] });
-            }
-          }
-        }, 100);
+      if (!track) {
+        await searchMessage.edit({ embeds: [errorEmbed('No results found for your search.')] });
+        return;
       }
+
+      if (playNext) {
+        player.addToQueueNext(track);
+        await searchMessage.edit({ 
+          embeds: [successEmbed(`Added to front of queue: **${track.title}** (Position: 1)`)] 
+        });
+      } else {
+        player.addToQueue(track);
+        const position = player.queue.length;
+        await searchMessage.edit({ 
+          embeds: [successEmbed(`Added to queue: **${track.title}** (Position: ${position})`)] 
+        });
+      }
+
+      // Start playing if nothing is currently playing
+      if (!player.currentTrack && player.queue.length > 0) {
+        const success = await player.play();
+        if (success) {
+          // Small delay to ensure currentTrack is set
+          setTimeout(async () => {
+            const currentTrack = player.currentTrack;
+            if (currentTrack) {
+              const embed = defaultEmbed(message.guild!)
+                .setTitle('🎵 Now Playing')
+                .setDescription(`**${currentTrack.title}**`)
+                .addFields(
+                  { name: 'Requested by', value: `<@${currentTrack.requestedBy}>`, inline: true },
+                  { name: 'Queue length', value: `${player.queue.length} songs`, inline: true }
+                );
+              
+              if ('send' in message.channel) {
+                await message.channel.send({ embeds: [embed] });
+              }
+            }
+          }, 100);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing play command:', error);
+      await searchMessage.edit({ embeds: [errorEmbed('An error occurred while processing your request. Please try again.')] });
     }
   },
 };
 
-// Process query/URL - this will be expanded in the future to handle actual search/streaming
+// Process query/URL with YouTube search integration
 async function processQuery(query: string, requestedBy: string) {
-  // Check if it's a URL
-  const isUrl = isValidUrl(query);
-  
-  if (isUrl) {
-    // Detect URL type
-    const url = query.toLowerCase();
-    let source: 'youtube' | 'soundcloud' | 'spotify' | 'file' = 'youtube';
+  try {
+    // Check if it's a URL
+    const isUrl = isValidUrl(query);
     
-    if (url.includes('soundcloud.com')) {
-      source = 'soundcloud';
-    } else if (url.includes('spotify.com')) {
-      source = 'spotify';
+    if (isUrl) {
+      // Handle URL - detect type and create appropriate track
+      const url = query.toLowerCase();
+      let source: 'youtube' | 'soundcloud' | 'spotify' | 'file' = 'youtube';
+      
+      if (url.includes('soundcloud.com')) {
+        source = 'soundcloud';
+      } else if (url.includes('spotify.com')) {
+        source = 'spotify';
+      }
+      
+      return {
+        title: `URL: ${query.length > 60 ? query.substring(0, 60) + '...' : query}`,
+        url: query,
+        duration: 180, // Default duration, could be improved with actual URL analysis
+        requestedBy,
+        source,
+      };
+    } else {
+      // Search YouTube for the query
+      const searchResults = await searchYouTube(query, { 
+        limit: 1
+      });
+
+      if (!searchResults || searchResults.length === 0) {
+        return null;
+      }
+
+      const video = searchResults[0];
+      
+      // Type guard to ensure we have a YouTube video
+      if (video.type !== 'video') {
+        return null;
+      }
+
+      return {
+        title: video.title || 'Unknown Title',
+        url: video.url,
+        duration: video.durationInSec || 180,
+        requestedBy,
+        source: 'youtube' as const,
+      };
     }
-    
-    return {
-      title: `URL: ${query.length > 40 ? query.substring(0, 40) + '...' : query}`,
-      url: query,
-      duration: 180,
-      requestedBy,
-      source,
-    };
-  } else {
-    // Search query - for now create mock track, future: search YouTube via play-dl
-    return {
-      title: query.length > 50 ? query.substring(0, 50) + '...' : query,
-      url: 'mock://search',
-      duration: 180,
-      requestedBy,
-      source: 'youtube' as const,
-    };
+  } catch (error) {
+    console.error('Error in processQuery:', error);
+    return null;
   }
 }
 
