@@ -1,7 +1,27 @@
 import type { PrefixCommand } from '../../types/prefixCommand.js';
-import { GuildMember, VoiceChannel } from 'discord.js';
+import { GuildMember, VoiceChannel, StageChannel } from 'discord.js';
 import { errorEmbed, successEmbed } from '../../lib/embeds.js';
 import { PlayerManager } from '../../lib/PlayerManager.js';
+
+// Helper function to check voice channel access - reusable across music commands
+async function checkVoiceAccess(message: any) {
+  if (!message.guild) return { error: 'This command can only be used in servers.' };
+
+  // Robust member fetching
+  let member: GuildMember;
+  try {
+    member = await message.guild.members.fetch(message.author.id);
+  } catch (error) {
+    return { error: 'Failed to fetch your member information. Please try again.' };
+  }
+
+  const voiceChannel = member.voice?.channel;
+  if (!voiceChannel || !(voiceChannel instanceof VoiceChannel || voiceChannel instanceof StageChannel)) {
+    return { error: 'You must be in a voice channel to use music commands!' };
+  }
+
+  return { member, voiceChannel };
+}
 
 const pauseCommand: PrefixCommand = {
   name: 'pause',
@@ -10,17 +30,13 @@ const pauseCommand: PrefixCommand = {
   category: 'music',
   guildOnly: true,
   async execute(message) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (!player.currentTrack) {
       await message.reply({ embeds: [errorEmbed('No music is currently playing!')] });
@@ -48,17 +64,13 @@ const resumeCommand: PrefixCommand = {
   category: 'music',
   guildOnly: true,
   async execute(message) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (!player.currentTrack) {
       await message.reply({ embeds: [errorEmbed('No music is currently paused!')] });
@@ -87,17 +99,13 @@ const skipCommand: PrefixCommand = {
   aliases: ['s', 'next'],
   guildOnly: true,
   async execute(message) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (!player.currentTrack) {
       await message.reply({ embeds: [errorEmbed('No music is currently playing!')] });
@@ -123,17 +131,13 @@ const disconnectCommand: PrefixCommand = {
   aliases: ['dc', 'leave', 'stop'],
   guildOnly: true,
   async execute(message) {
-    if (!message.guild) return;
-
-    const member = message.member as GuildMember;
-    const voiceChannel = member?.voice?.channel;
-
-    if (!voiceChannel || !(voiceChannel instanceof VoiceChannel)) {
-      await message.reply({ embeds: [errorEmbed('You must be in a voice channel to use music commands!')] });
+    const check = await checkVoiceAccess(message);
+    if (check.error) {
+      await message.reply({ embeds: [errorEmbed(check.error)] });
       return;
     }
 
-    const player = PlayerManager.getPlayer(message.guild);
+    const player = PlayerManager.getPlayer(message.guild!);
 
     if (!player.connection) {
       await message.reply({ embeds: [errorEmbed('I\'m not connected to a voice channel!')] });
@@ -145,7 +149,7 @@ const disconnectCommand: PrefixCommand = {
 
     player.clearQueue();
     player.disconnect();
-    PlayerManager.removePlayer(message.guild.id);
+    PlayerManager.removePlayer(message.guild!.id);
 
     const message_content = wasPlaying || queueLength > 0
       ? `👋 Disconnected and cleared ${queueLength} song${queueLength !== 1 ? 's' : ''} from the queue`
