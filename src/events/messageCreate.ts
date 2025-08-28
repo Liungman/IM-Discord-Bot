@@ -2,6 +2,7 @@ import type { EventModule } from '../types/event.js';
 import { PermissionsBitField, PermissionFlagsBits, inlineCode } from 'discord.js';
 import { errorEmbed } from '../lib/embeds.js';
 import { getGuildSettings } from '../storage/guildSettings.js';
+import { getDefaultGradientBanner } from '../lib/gradient.js';
 
 function parseArgs(str: string): string[] {
   const m = str.match(/(?:\"[^\"]+\"|\S+)/g) ?? [];
@@ -113,6 +114,29 @@ const mod: EventModule = {
         typeof options === 'string'
           ? { content: options, allowedMentions: { repliedUser: false } }
           : { allowedMentions: { repliedUser: false }, ...options };
+      
+      // Auto-inject gradient banner into embeds if no image is set
+      if (payload.embeds && Array.isArray(payload.embeds)) {
+        const gradientBanner = getDefaultGradientBanner();
+        if (gradientBanner) {
+          // Check if any embed lacks an image and inject gradient
+          let hasEmbedWithoutImage = false;
+          for (const embed of payload.embeds) {
+            if (embed && typeof embed === 'object' && !embed.image && !embed.thumbnail) {
+              embed.image = { url: 'attachment://gradient.png' };
+              hasEmbedWithoutImage = true;
+            }
+          }
+          
+          // Only attach the gradient if we actually used it
+          if (hasEmbedWithoutImage) {
+            payload.files = payload.files || [];
+            if (Array.isArray(payload.files)) {
+              payload.files.push(gradientBanner);
+            }
+          }
+        }
+      }
       
       const sent = await message.channel.send(payload as any);
       if (autoDeleteMs > 0) {

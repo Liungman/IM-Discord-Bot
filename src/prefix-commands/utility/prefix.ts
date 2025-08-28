@@ -9,6 +9,7 @@ const prefixCommand: PrefixCommand = {
   description: 'Show the current server prefix.',
   usage: '?prefix',
   category: 'utility',
+  aliases: ['px'],
   guildOnly: true,
   async execute(message) {
     if (!message.guild) return;

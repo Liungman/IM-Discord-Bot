@@ -53,8 +53,19 @@ export async function loadPrefixCommands(client: Client & { prefixCommands: Map<
         logger.warn({ file, commandName: command?.name }, 'Skipping invalid command in module');
         continue;
       }
+      
+      // Register the primary command name
       client.prefixCommands.set(command.name.toLowerCase(), command);
       loaded++;
+      
+      // Register aliases if they exist
+      if (command.aliases && Array.isArray(command.aliases)) {
+        for (const alias of command.aliases) {
+          if (alias && typeof alias === 'string') {
+            client.prefixCommands.set(alias.toLowerCase(), command);
+          }
+        }
+      }
     }
   }
   logger.info({ count: loaded }, 'Prefix commands loaded');

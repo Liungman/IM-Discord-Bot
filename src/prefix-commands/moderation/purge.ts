@@ -9,6 +9,7 @@ const purgeCommand: PrefixCommand = {
   description: 'Bulk delete recent messages (1-100).',
   usage: '?purge <count> [reason]',
   category: 'moderation',
+  aliases: ['p'],
   guildOnly: true,
   requiredPermissions: PermissionFlagsBits.ManageMessages,
   async execute(message, args) {
@@ -43,40 +44,13 @@ const purgeAllCommand: PrefixCommand = {
   async execute(message) {
     if (!message.channel?.isTextBased()) return;
     
-    // Confirm dangerous operation
-    const confirmEmbed = defaultEmbed(message.guild!)
-      .setTitle('⚠️ Purge All Confirmation')
-      .setDescription('This will delete ALL messages in this channel that are less than 14 days old.\n\n**This action cannot be undone!**\n\nType `CONFIRM` to proceed.')
-      .setColor(0xff0000);
-    
-    const confirmMsg = await message.reply({ embeds: [confirmEmbed] });
-    
-    // Wait for confirmation
-    const filter = (m: any) => m.author.id === message.author.id;
-    const collected = await (message.channel as any).awaitMessages({
-      filter,
-      max: 1,
-      time: 30000,
-      errors: ['time']
-    }).catch(() => null);
-    
-    if (!collected || collected.first()?.content !== 'CONFIRM') {
-      const cancelEmbed = defaultEmbed(message.guild!)
-        .setTitle('Purge Cancelled')
-        .setDescription('Operation cancelled or confirmation not received within 30 seconds.')
-        .setColor(0x808080);
-      
-      await confirmMsg.edit({ embeds: [cancelEmbed] });
-      return;
-    }
-    
-    // Start purging
+    // Start purging immediately (no confirmation needed per requirements)
     const statusEmbed = defaultEmbed(message.guild!)
       .setTitle('Purge in Progress')
-      .setDescription('Deleting messages... This may take a while.')
+      .setDescription('Deleting all messages... This may take a while.')
       .setColor(0xffff00);
     
-    await confirmMsg.edit({ embeds: [statusEmbed] });
+    const statusMsg = await message.reply({ embeds: [statusEmbed] });
     
     let totalDeleted = 0;
     let lastBatch = 100;
@@ -94,7 +68,7 @@ const purgeAllCommand: PrefixCommand = {
             .setDescription(`Deleted ${totalDeleted} messages so far...`)
             .setColor(0xffff00);
           
-          await confirmMsg.edit({ embeds: [updateEmbed] });
+          await statusMsg.edit({ embeds: [updateEmbed] });
         }
         
         // Small delay to avoid rate limits
@@ -109,7 +83,7 @@ const purgeAllCommand: PrefixCommand = {
         .addFields({ name: 'Note', value: 'Messages older than 14 days cannot be bulk deleted by Discord\'s API.' })
         .setColor(0x00ff00);
       
-      await confirmMsg.edit({ embeds: [successEmbed] });
+      await statusMsg.edit({ embeds: [successEmbed] });
       
     } catch (error) {
       const errorEmbed = defaultEmbed(message.guild!)
@@ -118,7 +92,7 @@ const purgeAllCommand: PrefixCommand = {
         .addFields({ name: 'Error', value: 'Failed to delete messages. I may lack permissions or messages are too old.' })
         .setColor(0xff0000);
       
-      await confirmMsg.edit({ embeds: [errorEmbed] });
+      await statusMsg.edit({ embeds: [errorEmbed] });
     }
   },
 };
