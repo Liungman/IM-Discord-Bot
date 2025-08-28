@@ -10,5 +10,6 @@ export interface PrefixCommand {
   aliases?: string[];
   requiredPermissions?: PermissionResolvable;
   guildOnly?: boolean;
+  canonicalName?: string; // Set during registration to track the primary name
   execute: (message: Message, args: string[], client: Client) => Promise<void>;
 }

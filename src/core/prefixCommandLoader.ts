@@ -10,13 +10,19 @@ function rootDir() {
   return path.resolve(here, '..');
 }
 
-export async function loadPrefixCommands(client: Client & { prefixCommands: Map<string, PrefixCommand> }) {
+export async function loadPrefixCommands(client: Client & { 
+  prefixCommands: Map<string, PrefixCommand>;
+  canonicalCommands: Map<string, PrefixCommand>;
+}) {
   const base = rootDir();
   const dir = path.join(base, 'prefix-commands');
   const pattern = `${dir.replace(/\\/g, '/')}/**/*.{ts,js}`;
   const files = await fg(pattern, { ignore: ['**/*.d.ts', '**/*.map'], absolute: true });
 
   client.prefixCommands.clear();
+  if (!client.canonicalCommands) (client as any).canonicalCommands = new Map();
+  client.canonicalCommands.clear();
+  
   let loaded = 0;
   for (const file of files) {
     const mod = await import(pathToFileURL(file).href);
@@ -54,11 +60,16 @@ export async function loadPrefixCommands(client: Client & { prefixCommands: Map<
         continue;
       }
       
+      // Set canonical name for this command
+      command.canonicalName = command.name.toLowerCase();
+      
       // Register the primary command name
       client.prefixCommands.set(command.name.toLowerCase(), command);
+      // Store in canonical map (only primary names, no aliases)
+      client.canonicalCommands.set(command.name.toLowerCase(), command);
       loaded++;
       
-      // Register aliases if they exist
+      // Register aliases if they exist (only in lookup map, not canonical)
       if (command.aliases && Array.isArray(command.aliases)) {
         for (const alias of command.aliases) {
           if (alias && typeof alias === 'string') {

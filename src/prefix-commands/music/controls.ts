@@ -82,6 +82,7 @@ const shuffleCommand: PrefixCommand = {
   description: 'Shuffle the current queue.',
   usage: '?shuffle',
   category: 'music',
+  aliases: ['mix'],
   guildOnly: true,
   async execute(message) {
     if (!message.guild) return;

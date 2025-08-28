@@ -14,10 +14,12 @@ export function createClient() {
     partials: [Partials.GuildMember, Partials.User, Partials.Message, Partials.Channel],
   }) as Client & {
     prefixCommands: Collection<string, PrefixCommand>;
+    canonicalCommands: Collection<string, PrefixCommand>;
     commandUsage: Collection<string, number>;
   };
 
   (client as any).prefixCommands = new Collection<string, PrefixCommand>();
+  (client as any).canonicalCommands = new Collection<string, PrefixCommand>();
   (client as any).commandUsage = new Collection<string, number>();
 
   client.once('clientReady', () => {
