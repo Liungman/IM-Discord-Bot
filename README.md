@@ -1,20 +1,33 @@
 # IM Discord Bot
 
-OLED-themed Discord bot with a darker black-and-blue embed style, classic prefix commands, admin/mod tools, and anti-nuke safeguards.
+OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix commands, comprehensive moderation tools, anti-raid protection, and advanced security features.
 
-Prefix: `?` (Enable Message Content intent in the Discord Developer Portal.)
+**Dynamic Prefix:** Defaults to `?` but configurable per server (Enable Message Content intent in the Discord Developer Portal.)
 
-## Features
+## ✨ New Features
 
-- Dark black-and-blue embed theme
-- Prefix commands with `?` (moderation, security, AFK, embed tools, fun, utility)
-- Usage tracking: `?topcommands`
-- Snipe system: `?snipe` for last deleted message
-- Auto-deleting responses and command invocations (configurable)
-- Rotating presence showing help hint, server count, and ping
-- Bot status command: `?botstatus` (uptime, ping, memory)
+### 🔧 Dynamic Configuration
+- **Dynamic Prefix**: Set custom prefix per server with `?prefix set <symbol>`
+- **Permission-Aware Help**: Help command shows only commands you can actually use
+- **Multi-Word Commands**: Support for commands like `lockdown all`, `purge between`, etc.
+- **Instant Command Cleanup**: Commands are deleted immediately to keep channels clean
 
-## Setup
+### 🛡️ Enhanced Security & Moderation
+- **Advanced Purge**: `?purge all` (delete everything), `?purge between <id1> <id2>` (range deletion)
+- **Channel Nuke**: `?nuke` completely recreates a channel (removes all history)
+- **Lockdown System**: Lock single/all channels, ignore lists, custom target roles
+- **Anti-Raid Protection**: Automatic lockdown on mass joins with configurable thresholds
+- **Message Filters**: Block links/invites per channel with whitelist support
+- **Thread Management**: Basic thread lock/unlock commands
+
+### 🎯 Advanced Lockdown Commands
+- `?lockdown` - Lock current channel
+- `?lockdown all` - Lock all channels  
+- `?lockdown role <@role>` - Set which role to lock (default: @everyone)
+- `?lockdown ignore add/remove/list` - Manage ignore list for lockdown operations
+- `?unlock all` - Remove lockdown from all channels
+
+## 🚀 Setup
 
 1) Create `.env` and set:
    ```
@@ -30,52 +43,141 @@ npm run dev
 npm run build && npm start
 ```
 
-## Example Commands
+## 📋 Command Categories
 
-Moderation:
-- `?purge 20`
-- `?kick @user spamming`
-- `?ban @user 1 breaking rules`
-- `?unban 123456789012345678 appeal accepted`
-- `?timeout @user 2h take a breather`
-- `?lock` / `?unlock`
-- `?slowmode 5`
-- `?nick @user New Nick`
-- `?warn @user rule 1`
+### 🛡️ Security Commands
+- `?antinuke status|on|off` - Anti-nuke protection settings
+- `?settings show|set <path> <value>` - View/modify server settings  
+- `?lockdown [reason]` - Lock current channel
+- `?lockdown all [reason]` - Lock all channels (with confirmation)
+- `?lockdown role <@role>` - Set lockdown target role
+- `?lockdown ignore add/remove/list [#channel]` - Manage lockdown ignore list
+
+### 🔨 Moderation Commands  
+- `?purge <1-100> [reason]` - Delete recent messages
+- `?purge all` - Delete ALL messages (with confirmation)  
+- `?purge between <startId> <endId>` - Delete messages in range
+- `?nuke` - Completely recreate current channel (with confirmation)
+- `?unlock all` - Remove lockdown from all channels
+- `?thread lock/unlock [reason]` - Lock/unlock current thread
+- `?kick @user [reason]`
+- `?ban @user [days] [reason]` 
+- `?unban <userId> [reason]`
+- `?timeout @user <duration> [reason]`
+- `?lock` / `?unlock` - Channel message permissions
+- `?slowmode <seconds>`
+- `?nick @user <nickname>`
+- `?warn @user <reason>`
 - `?warnings @user`
 - `?clearwarns @user`
 
-Security/Misc:
-- `?invites`
-- `?addemote <:smile:123456789012345678> smile`
-- `?antinuke status|on|off`
-- `?settings show`
-- `?settings set autoDeleteMs 10000`
-- `?settings set antiNuke.thresholds.ChannelDelete 2`
+### ⚙️ Utility Commands
+- `?help [command]` - Dynamic help with permission filtering
+- `?prefix` - Show current server prefix
+- `?prefix set <symbol>` - Set new prefix (Administrator only)
+- `?prefix remove` - Reset to default prefix (Administrator only)
+- `?botstatus` - Bot statistics and uptime
+- `?ping` - Bot latency
+- `?avatar [@user]` - User avatar
+- `?userinfo [@user]` - User information
+- `?serverinfo` - Server information
+- `?say <message>` - Make bot say something
+- `?topcommands` - Usage statistics
 
-AFK:
-- `?afk Sleeping`
-- `?afkmentions`
+### 🎮 AFK System
+- `?afk [message]` - Set AFK status
+- `?afkmentions` - View mentions received while AFK
 
-Embed Manager:
-- `?defaultembed Title | Description`
-- `?embedcreate welcome "{ \"title\": \"Welcome!\", \"description\": \"Read the rules.\" }"`
-- `?embedsend welcome`
-- `?embedlist`
-- `?embeddelete welcome`
-- `?embedcode <message link>`
+### 🎨 Embed Manager
+- `?defaultembed <title> | <description>` - Quick embed creation
+- `?embedcreate <name> <JSON>` - Create named embed template
+- `?embedsend <name>` - Send saved embed
+- `?embedlist` - List all saved embeds
+- `?embeddelete <name>` - Delete saved embed
+- `?embedcode <message link>` - Get embed JSON from message
 
-Fun/Utility:
-- `?help [command]`
-- `?botstatus`
-- `?ping`
-- `?avatar @user`
-- `?userinfo [@user]`
-- `?serverinfo`
-- `?say hello`
-- `?topcommands`
+### 🎯 Additional Tools
+- `?invites` - Server invite information
+- `?addemote <emoji> <name>` - Add server emoji
+- `?snipe` - Show last deleted message
 
-## Notes
+## 🔒 Security Features
 
-- The bot needs appropriate permissions (Manage Messages, Kick Members, Ban Members, Moderate Members, Manage Channels, Manage Guild, Manage Expressions, View Audit Log).
-- AFK, embeds, settings and warnings write to `data/kv.json`.
+### Anti-Raid Protection
+- **Automatic Detection**: Monitors join rates within configurable time windows
+- **Smart Actions**: Auto-lockdown with timed unlocking
+- **Logging**: Optional mod log channel notifications
+- **Configurable**: Adjust thresholds, window timing, and response actions
+
+### Message Filtering  
+- **Link Filter**: Block/allow specific domains per channel
+- **Invite Filter**: Block Discord invites with role exemptions
+- **Whitelist Support**: Exempt specific URLs from link filtering
+- **Role Exemptions**: Bypass filters for trusted roles
+
+### Advanced Lockdown System
+- **Granular Control**: Lock individual channels or entire server
+- **Ignore Lists**: Exclude specific channels from mass operations  
+- **Custom Target Roles**: Lock specific roles instead of @everyone
+- **Confirmation Required**: Dangerous operations require explicit confirmation
+
+## ⚙️ Configuration Examples
+
+```bash
+# Set custom prefix
+?prefix set !
+
+# Configure anti-raid (via settings command)
+?settings set antiRaid.enabled true
+?settings set antiRaid.joinThreshold 10  
+?settings set antiRaid.windowMs 30000
+?settings set antiRaid.logChannelId 123456789012345678
+
+# Set lockdown target role
+?lockdown role @Members
+
+# Add channels to lockdown ignore list  
+?lockdown ignore add #staff-chat
+?lockdown ignore add #mod-logs
+```
+
+## 🔧 Required Permissions
+
+The bot needs these Discord permissions to function properly:
+- **Manage Messages** - Message deletion, purge commands
+- **Manage Channels** - Lockdown, nuke, permission management
+- **Kick Members** - Kick command
+- **Ban Members** - Ban/unban commands  
+- **Moderate Members** - Timeout command
+- **Manage Guild** - Settings management
+- **Manage Expressions** - Emoji management
+- **View Audit Log** - Anti-nuke monitoring
+- **Manage Threads** - Thread lock/unlock
+
+## 📊 Data Storage
+
+Settings and data are stored in `data/kv.json`:
+- **Guild Settings**: Prefixes, lockdown config, filter settings
+- **AFK Status**: User away messages and mentions
+- **Embed Templates**: Custom embed storage
+- **Warnings**: User warning tracking
+
+## 🌟 Advanced Usage
+
+### Multi-Word Commands
+The bot supports complex command structures:
+- `?lockdown ignore add #channel` 
+- `?purge between 123456789 987654321`
+- `?prefix set !`
+- `?thread lock Temporary maintenance`
+
+### Permission-Aware Help
+The help system intelligently filters commands:
+- Only shows commands you have permission to use
+- Adapts to your server role and permissions
+- Updates command examples with your server's prefix
+
+### Instant Command Cleanup  
+- Commands are deleted immediately when possible
+- Responses auto-delete after configured time
+- Keeps channels clean and reduces clutter
