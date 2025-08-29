@@ -52,14 +52,33 @@ const command: PrefixCommand = {
       
       const e = defaultEmbed(message.guild ?? undefined).setTitle('Help - Available Commands');
       
+      // Get category order from settings
+      const categoryOrder = settings?.helpCategories?.order ?? DefaultSettings.helpCategories.order;
+      
+      // Display categories in the specified order
+      for (const category of categoryOrder) {
+        const cmds = byCat.get(category);
+        if (cmds && cmds.length > 0) {
+          // Sort commands by name for consistent display
+          const sortedCmds = cmds.sort((a, b) => a.name.localeCompare(b.name));
+          const commandList = sortedCmds
+            .map((c) => `${prefix}${c.name}`)
+            .join(', ')
+            .slice(0, 1000) || '—';
+          e.addFields({ name: category.toUpperCase(), value: commandList });
+        }
+      }
+      
+      // Display any remaining categories that weren't in the order list
       for (const [cat, cmds] of byCat) {
-        // Sort commands by name for consistent display
-        const sortedCmds = cmds.sort((a, b) => a.name.localeCompare(b.name));
-        const commandList = sortedCmds
-          .map((c) => `${prefix}${c.name}`)
-          .join(', ')
-          .slice(0, 1000) || '—';
-        e.addFields({ name: cat.toUpperCase(), value: commandList });
+        if (!categoryOrder.includes(cat)) {
+          const sortedCmds = cmds.sort((a, b) => a.name.localeCompare(b.name));
+          const commandList = sortedCmds
+            .map((c) => `${prefix}${c.name}`)
+            .join(', ')
+            .slice(0, 1000) || '—';
+          e.addFields({ name: cat.toUpperCase(), value: commandList });
+        }
       }
       
       e.setFooter({ text: `Use ${prefix}help <command> for details about a specific command` });

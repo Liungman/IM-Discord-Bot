@@ -15,7 +15,7 @@ OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix
 
 ### 🎨 Visual Enhancements
 - **Configurable Gradient Embeds**: Per-guild gradient settings with position control (top, bottom, thumbnail-bar, or none)
-- **Custom Colors**: Set custom gradient start and end colors per server
+- **Custom Colors**: Set custom gradient start and end colors per server (default: red → purple)
 - **Consistent Theming**: Dark OLED-friendly color scheme throughout
 - **Rich Visual Feedback**: Enhanced embed formatting with contextual colors and timestamps
 
@@ -37,9 +37,28 @@ OLED-themed Discord bot with a darker black-and-blue embed style, dynamic prefix
 
 ### 🔊 Temporary Voice Channels
 - **Dynamic Creation**: `?tvoice create [name] [--limit N]` for on-demand voice channels
+- **Auto-Creation**: Join a "Create VC" channel to automatically get your own temp channel
 - **Permission Management**: `?tvoice lock/unlock`, `?tvoice invite/remove @user`
 - **Auto-Cleanup**: Channels automatically deleted when empty after timeout
 - **Owner Controls**: Full permission management for channel creators
+
+### ⭐ Starboard System
+- **Message Highlighting**: Popular messages automatically posted to starboard channel
+- **Configurable Settings**: `?starboard channel/threshold/emoji/enable/disable`
+- **NSFW Filtering**: Option to ignore NSFW channels
+- **Deduplication**: Prevents duplicate starboard entries
+- **Per-Guild Settings**: Each server has independent starboard configuration
+
+### 🎉 Interactive Features
+- **Polls**: `?poll <duration> <question> | <option1> | <option2>` - Create button-based polls with automatic results
+- **Reaction Roles**: `?reactionrole create` - Self-assignable roles via button interactions
+- **Welcome/Leave Messages**: `?welcome` - Customizable member join/leave messages with DM options
+
+### 📊 Community Management
+- **Member Welcome**: Automated welcome messages with customizable templates
+- **Leave Notifications**: Optional leave messages in designated channels
+- **DM Welcome**: Private welcome messages for new members
+- **Variable Support**: Use `{user}`, `{username}`, `{server}` in messages
 
 ### 🛡️ Enhanced Security & Moderation
 - **Advanced Purge System**: Multiple purge modes with no confirmation required:
@@ -100,6 +119,29 @@ npm run build && npm start
 - `?volume <0-200>` (alias: `?vol`) - Set playback volume
 - `?repeat <off|one|all>` (alias: `?loop`) - Set repeat mode
 - `?shuffle` - Shuffle current queue
+
+### 🎵 Music Troubleshooting
+**Common Issues & Solutions:**
+
+1. **Track found but not playing?**
+   - The bot will automatically join your voice channel when you use `?play`
+   - Ensure the bot has CONNECT and SPEAK permissions in your voice channel
+   - For Stage channels, the bot will automatically request to speak
+
+2. **Poor audio quality?**
+   - The bot uses high-quality streams from YouTube via play-dl
+   - Audio resources use inline volume control for consistent levels
+   - Connection retries on network changes automatically
+
+3. **Bot not joining voice channel?**
+   - Check that you're in a voice channel when using `?play`
+   - Verify bot permissions: CONNECT, SPEAK, and VIEW_CHANNEL
+   - Stage channels require additional "Request to Speak" permission
+
+4. **Playback stops unexpectedly?**
+   - Network interruptions are handled with automatic retries
+   - Bot will skip to next track if current track fails to load
+   - Use `?queue` to check if there are more songs queued
 
 ### 🎧 Spotify Commands (Optional - requires setup)
 - `?spotify login` - Connect your Spotify account
@@ -181,6 +223,10 @@ npm run build && npm start
 - `?serverinfo` - Server information
 - `?say <message>` - Make bot say something
 - `?topcommands` - Usage statistics
+- `?starboard [enable|disable|channel|threshold|emoji]` - Configure starboard system
+- `?welcome [enable|disable|channel|message|test]` - Configure welcome/leave messages
+- `?reactionrole create <title> | <description> | <@role:emoji>` - Create reaction role messages
+- `?poll <duration> <question> | <option1> | <option2>` - Create interactive polls
 
 ### 🎮 AFK System
 - `?afk [message]` - Set AFK status
@@ -295,7 +341,7 @@ npm run build && npm start
 ?gradient position top               # Gradient at top of embeds
 ?gradient position thumbnail-bar     # Small gradient as thumbnail
 ?gradient position none              # Disable gradients
-?gradient colors #ff6b35 #004e92     # Custom orange to blue gradient
+?gradient colors #8A0D37 #6E00A8     # Custom red to purple gradient (default)
 ```
 
 ### Command Aliases System
