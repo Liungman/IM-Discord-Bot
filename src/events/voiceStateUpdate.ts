@@ -18,6 +18,33 @@ const mod: EventModule = {
         TempVoiceManager.updateActivity(oldChannelId);
       }
     }
+
+    // Auto Temp VC creation: Check if user joined a "Create VC" channel
+    if (newChannelId && newState.channel && newState.member) {
+      const channel = newState.channel;
+      
+      // Check if channel name is "Create VC" (case-insensitive)
+      if (channel.name.toLowerCase() === 'create vc') {
+        const guild = newState.guild;
+        const member = newState.member;
+        
+        // Create a temporary VC for this user
+        const tempVC = await TempVoiceManager.createTempChannel(
+          guild,
+          member.id,
+          `${member.displayName || member.user.username}'s Channel`
+        );
+        
+        if (tempVC) {
+          // Move the user to the new temp channel
+          try {
+            await member.voice.setChannel(tempVC);
+          } catch (error) {
+            console.error('Failed to move user to temp channel:', error);
+          }
+        }
+      }
+    }
   },
 };
 

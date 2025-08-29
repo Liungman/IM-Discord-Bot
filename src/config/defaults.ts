@@ -3,8 +3,11 @@ export const DefaultSettings = {
   autoDeleteMs: 15000,
   gradient: {
     position: 'none' as 'top' | 'bottom' | 'thumbnail-bar' | 'none',
-    startColor: '#1e40af', // deep blue
-    endColor: '#000000', // black
+    startColor: '#8A0D37', // deep red
+    endColor: '#6E00A8', // purple
+  },
+  helpCategories: {
+    order: ['moderation', 'security', 'music', 'voice', 'utility', 'embed', 'spotify', 'afk', 'fun'],
   },
   tempVoice: {
     categoryId: '', // Category where temp channels are created
@@ -43,5 +46,29 @@ export const DefaultSettings = {
     } as Record<string, number>,
     action: { type: 'timeout', ms: 60 * 60 * 1000 } as { type: 'timeout'; ms: number },
     logChannelId: '' as string,
+  },
+  starboard: {
+    enabled: false,
+    channelId: '',
+    threshold: 3,
+    emoji: '⭐',
+    ignoreNsfw: true,
+  },
+  reactionRoles: {
+    messages: {} as Record<string, {
+      channelId: string;
+      messageId: string;
+      roles: Record<string, string>; // emoji -> roleId
+      type: 'buttons' | 'select';
+    }>,
+  },
+  welcomeLeave: {
+    enabled: false,
+    welcomeChannelId: '',
+    leaveChannelId: '',
+    welcomeMessage: 'Welcome {user} to {server}!',
+    leaveMessage: '{user} has left {server}.',
+    dmWelcome: false,
+    dmWelcomeMessage: 'Welcome to {server}! Please read the rules and enjoy your stay.',
   },
 };

@@ -9,9 +9,12 @@ import {
   joinVoiceChannel,
   NoSubscriberBehavior,
   StreamType,
+  entersState,
 } from '@discordjs/voice';
-import { VoiceChannel, Guild } from 'discord.js';
+import { VoiceChannel, StageChannel, Guild, PermissionFlagsBits } from 'discord.js';
 import { createReadStream } from 'fs';
+import { stream as playDlStream, video_basic_info } from 'play-dl';
+import * as prism from 'prism-media';
 import { logger } from '../core/logger.js';
 
 export interface QueueItem {
@@ -43,7 +46,7 @@ export class GuildPlayer {
     this.guildId = guild.id;
   }
 
-  async joinChannel(channel: VoiceChannel): Promise<boolean> {
+  async joinChannel(channel: VoiceChannel | StageChannel): Promise<boolean> {
     try {
       // Leave current channel if connected to a different one
       if (this.connection && this.connection.joinConfig.channelId !== channel.id) {
@@ -66,6 +69,9 @@ export class GuildPlayer {
 
           if (newState.status === VoiceConnectionStatus.Destroyed) {
             this.cleanup();
+          } else if (newState.status === VoiceConnectionStatus.Disconnected) {
+            // Handle network changes and reconnection
+            logger.info({ guildId: this.guildId }, 'Voice connection disconnected, attempting to reconnect');
           }
         });
 
@@ -73,6 +79,27 @@ export class GuildPlayer {
           logger.error({ guildId: this.guildId, error }, 'Voice connection error');
           this.cleanup();
         });
+      }
+
+      // Await connection to be ready with timeout
+      try {
+        await entersState(this.connection, VoiceConnectionStatus.Ready, 20_000);
+      } catch (error) {
+        logger.warn({ guildId: this.guildId, error }, 'Failed to establish voice connection within timeout');
+        // Connection might still work, continue
+      }
+
+      // Handle Stage channels - request to speak if needed
+      if (channel instanceof StageChannel) {
+        try {
+          const me = this.guild.members.me;
+          if (me && !me.voice?.suppress) {
+            await me.voice.setSuppressed(false);
+            logger.info({ guildId: this.guildId }, 'Requested to speak in stage channel');
+          }
+        } catch (error) {
+          logger.warn({ guildId: this.guildId, error }, 'Failed to request speak permission in stage channel');
+        }
       }
 
       if (!this.player) {
@@ -154,14 +181,17 @@ export class GuildPlayer {
         const track = this.queue.shift()!;
         this.currentTrack = track;
         
-        // For now, we'll implement basic file playback
-        // Full implementation would use play-dl for streaming
         logger.info({ guildId: this.guildId, track: track.title }, 'Playing track');
         
-        // This is a placeholder - actual implementation would stream from URL
-        // const stream = await play-dl or similar streaming
-        // const resource = createAudioResource(stream, { inputType: StreamType.Arbitrary });
-        // this.player.play(resource);
+        // Create audio resource from the track URL
+        const audioResource = await this.createAudioResourceFromTrack(track);
+        if (!audioResource) {
+          logger.error({ guildId: this.guildId, track: track.title }, 'Failed to create audio resource');
+          this.handleTrackEnd(); // Skip to next track
+          return false;
+        }
+        
+        this.player.play(audioResource);
       }
 
       this.paused = false;
@@ -170,6 +200,56 @@ export class GuildPlayer {
     } catch (error) {
       logger.error({ guildId: this.guildId, error }, 'Failed to play track');
       return false;
+    }
+  }
+
+  private async createAudioResourceFromTrack(track: QueueItem): Promise<AudioResource | null> {
+    try {
+      let stream: any;
+      
+      switch (track.source) {
+        case 'youtube':
+          // Use play-dl to get the stream
+          stream = await playDlStream(track.url, { quality: 2 }); // Use highest quality
+          break;
+        case 'soundcloud':
+          // play-dl also supports SoundCloud
+          stream = await playDlStream(track.url);
+          break;
+        case 'file':
+          // Local file stream
+          stream = createReadStream(track.url);
+          break;
+        case 'spotify':
+          // Spotify URLs need to be converted to YouTube first
+          // This is a placeholder - proper implementation would search YouTube for the Spotify track
+          logger.warn({ guildId: this.guildId }, 'Spotify streaming not fully implemented yet');
+          return null;
+        default:
+          logger.warn({ guildId: this.guildId, source: track.source }, 'Unsupported track source');
+          return null;
+      }
+
+      if (!stream) {
+        logger.error({ guildId: this.guildId, track: track.title }, 'Failed to get stream for track');
+        return null;
+      }
+
+      // Create audio resource with inline volume control
+      const resource = createAudioResource(stream.stream || stream, {
+        inputType: stream.type || StreamType.Arbitrary,
+        inlineVolume: true,
+      });
+
+      // Set volume based on guild player volume setting
+      if (resource.volume) {
+        resource.volume.setVolume(this.volume / 100);
+      }
+
+      return resource;
+    } catch (error) {
+      logger.error({ guildId: this.guildId, error, track: track.title }, 'Error creating audio resource');
+      return null;
     }
   }
 
